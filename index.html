@@ -56,7 +56,8 @@
     #pv_questions th:nth-child(2), #pv_questions th:nth-child(3),
     #pv_questions td:nth-child(2), #pv_questions td:nth-child(3){ width:10.5%; text-align:center; }
     #pv_questions td.sn{font-size:18px; font-weight:800; letter-spacing:.05em}
-    .sheet .sign-img{width:100%; height:auto; max-height:210px; border:1px solid #ccc;border-radius:4px;object-fit:contain; display:block; margin:0 auto}
+    .sheet #pv_nome{text-transform: uppercase;}
+.sheet .sign-img{width:100%; height:auto; max-height:130px; border:none; border-radius:0; object-fit:contain; display:block; margin:0 auto}
     .sheet .sign-area{display:flex; gap:16px; align-items:flex-end; margin-top:18px}
     .sheet .sign-box{flex:1}
     .sheet .line{height:1px;background:#ccc;margin:6px 0}
@@ -347,7 +348,7 @@
       const nome = $('#nome').value.trim();
       const cpf = $('#cpf').value.trim();
       const data = $('#data_assinatura').value; // hidden
-      $('#pv_nome').textContent = nome;
+      $('#pv_nome').textContent = U(nome);
       $('#pv_cpf').textContent = cpf;
       if (data) $('#doc_data').textContent = new Intl.DateTimeFormat('pt-BR').format(new Date(data));
 
