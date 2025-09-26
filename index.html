@@ -100,7 +100,7 @@
         <div class="row">
           <div>
             <label for="nome">Nome completo</label>
-            <input id="nome" placeholder="Ex.: João da Silva" />
+            <input id="nome" placeholder="Ex.: João da Silva" style="text-transform: uppercase;" />
           </div>
           <div>
             <label for="cpf">CPF</label>
@@ -406,11 +406,21 @@
 
     // eventos
     ['nome','cpf','data_assinatura'].forEach(id => {
-      const el=$( '#'+id );
-      if(!el) return;
-      el.addEventListener('input', renderPreview);
-      el.addEventListener('change', renderPreview);
+  const el = $('#'+id);
+  if(!el) return;
+  if(id==='nome'){
+    el.addEventListener('input', (e)=>{
+      const i = e.target;
+      const s = i.selectionStart, epos = i.selectionEnd;
+      i.value = (i.value||'').toLocaleUpperCase('pt-BR');
+      try{ i.setSelectionRange(s, epos); }catch(_){/* iOS may ignore */}
+      renderPreview();
     });
+  } else {
+    el.addEventListener('input', renderPreview);
+  }
+  el.addEventListener('change', renderPreview);
+});
     document.getElementById('cpf').addEventListener('input', (e)=> e.target.value = maskCPF(e.target.value));
     for(let i=1;i<=7;i++){
       document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview));
