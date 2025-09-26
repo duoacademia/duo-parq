@@ -66,9 +66,9 @@
 
     /* Radios segmentados */
     .opts{display:inline-flex; gap:10px; align-items:center; flex-wrap:nowrap}
-    .seg{display:inline-flex; align-items:center; border-radius:999px; overflow:hidden; cursor:pointer}
-    .seg input{position:absolute; opacity:0;}
-    .seg span{display:inline-block; padding:8px 16px; border:1px solid #334155; border-radius:999px; background:#0b1220; color:#e5e7eb; font-weight:700; line-height:1; user-select:none;}
+    .seg{display:inline-flex; align-items:center; border-radius:999px; overflow:hidden}
+    .seg input{position:absolute; opacity:0; pointer-events:none}
+    .seg span{display:inline-block; padding:8px 16px; border:1px solid #334155; border-radius:999px; background:#0b1220; color:#e5e7eb; font-weight:700; line-height:1; user-select:none; cursor:pointer;}
     .seg input:focus + span{box-shadow:0 0 0 3px rgba(59,130,246,.35)}
     .seg input:checked + span{background:var(--brand); color:white; border-color:var(--brand)}
     .q{display:grid; grid-template-columns: 1fr auto; align-items:center; gap:14px; padding:12px 0; border-bottom:1px dashed #2a3346}
@@ -77,11 +77,6 @@
       .q{grid-template-columns: 1fr}
       .opts{gap:8px}
     }
-
-    /* Maiúsculas no texto digitado */
-    input[type="text"], input:not([type]) { text-transform: uppercase; }
-    /* Fix leve de kerning apenas na área imprimível */
-    #printArea, #printArea *{ font-kerning:none; letter-spacing:.2px; word-spacing:.3px; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   </style>
 </head>
 <body>
@@ -91,7 +86,7 @@
         <h1>DUO Academia · PAR-Q (Questionário de Prontidão Para Atividade Física)</h1>
         <div class="badge">Preencha o PAR-Q. Se houver alguma resposta “SIM”, aceite o termo e assine; depois gere o PDF.</div>
       </div>
-      <div class="badge">v1.2.1 (PAR‑Q)</div>
+      <div class="badge">v1.2 (PAR‑Q)</div>
     </header>
 
     <div class="grid">
@@ -100,7 +95,7 @@
         <div class="row">
           <div>
             <label for="nome">Nome completo</label>
-            <input id="nome" placeholder="Ex.: João da Silva" style="text-transform: uppercase;" />
+            <input id="nome" placeholder="Ex.: João da Silva" />
           </div>
           <div>
             <label for="cpf">CPF</label>
@@ -108,6 +103,7 @@
             <div class="help">Obrigatório</div>
           </div>
         </div>
+        <!-- Data: oculta e não-editável -->
         <div class="row" style="display:none">
           <div>
             <label for="data_assinatura">Data</label>
@@ -270,12 +266,6 @@
     const $ = (s) => document.querySelector(s);
     const docId = () => new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
     const onlyDigits = (v) => (v||'').replace(/\D+/g,'');
-    const U = (s)=> (s||'').toLocaleUpperCase('pt-BR');
-function slugUpper(s){
-  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .toUpperCase().replace(/[^A-Z0-9]+/g,'');
-}
-
     const maskCPF = (v) => {
       v = onlyDigits(v).slice(0,11);
       return v.replace(/(\d{3})(\d)/, '$1.$2')
@@ -299,6 +289,11 @@ function slugUpper(s){
     const logoSrc = urlParamLogo || DEFAULT_LOGO;
     (function setLogo(){ const img=$('#sheet_logo'); if(img){img.src=logoSrc; img.setAttribute('crossorigin','anonymous');} })();
 
+    // helper para nome do arquivo
+    function slugUpper(s){
+      return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
+    }
+
     function setTodayBR(){
       try{
         const parts = new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Fortaleza', day:'2-digit', month:'2-digit', year:'numeric'}).formatToParts(new Date());
@@ -306,8 +301,8 @@ function slugUpper(s){
         const mm = parts.find(p=>p.type==='month').value;
         const yyyy = parts.find(p=>p.type==='year').value;
         const iso = `${yyyy}-${mm}-${dd}`;
-        $('#data_assinatura').value = iso;
-        $('#doc_data').textContent = `${dd}/${mm}/${yyyy}`;
+        $('#data_assinatura').value = iso;            // hidden e imutável
+        $('#doc_data').textContent = `${dd}/${mm}/${yyyy}`; // cabeçalho da prévia
       }catch(e){
         const t=new Date(), yyyy=t.getFullYear(), mm=String(t.getMonth()+1).padStart(2,'0'), dd=String(t.getDate()).padStart(2,'0');
         const iso=`${yyyy}-${mm}-${dd}`; $('#data_assinatura').value=iso; $('#doc_data').textContent=`${dd}/${mm}/${yyyy}`;
@@ -342,21 +337,17 @@ function slugUpper(s){
       const a = {};
       for(let i=1;i<=7;i++){
         const v = document.querySelector(`input[name="q${i}"]:checked`);
-        a[`q${i}`] = v ? (v.value||'').toUpperCase() : '';
+        a[`q${i}`] = v ? v.value : '';
       }
       return a;
     }
     function anyYes(a){ return Object.values(a).some(v => v==='S'); }
 
     function renderPreview(){
-      // força o campo NOME a ficar em maiúsculas enquanto digita
-      const nomeInput = $('#nome');
-      if (nomeInput && nomeInput.value) nomeInput.value = U(nomeInput.value);
-
-      const nome = nomeInput ? nomeInput.value.trim() : '';
+      const nome = $('#nome').value.trim();
       const cpf = $('#cpf').value.trim();
-      const data = $('#data_assinatura').value;
-      $('#pv_nome').textContent = U(nome);
+      const data = $('#data_assinatura').value; // hidden
+      $('#pv_nome').textContent = nome;
       $('#pv_cpf').textContent = cpf;
       if (data) $('#doc_data').textContent = new Intl.DateTimeFormat('pt-BR').format(new Date(data));
 
@@ -380,7 +371,7 @@ function slugUpper(s){
     }
 
     async function generatePDF(){
-      const nome = ($('#nome').value||'').trim();
+      const nome = $('#nome').value.trim();
       const cpf = $('#cpf').value.trim();
       if (!nome) { alert('Informe o seu nome completo.'); return; }
       if (!isValidCPF(cpf)) { alert('CPF inválido.'); return; }
@@ -404,45 +395,24 @@ function slugUpper(s){
       const pageWidth = pdf.internal.pageSize.getWidth();
       const w = pageWidth - 20, h = (canvasImg.height * w) / canvasImg.width;
       pdf.addImage(imgData, 'PNG', 10, 10, w, h, undefined, 'FAST');
-      const iso = (document.getElementById('data_assinatura').value||'');
-const [yy,mm,dd] = iso.split('-');
-const dataStr = `${dd||new Date().getDate().toString().padStart(2,'0')}${mm||String(new Date().getMonth()+1).padStart(2,'0')}${yy||String(new Date().getFullYear())}`;
-const filename = `PARQ_${slugUpper(document.getElementById('nome').value)}_${dataStr}.pdf`;
-pdf.save(filename);
+
+      // Nome do arquivo: PARQ_<NOME>_<DDMMAAAA>.pdf
+      const iso = document.getElementById('data_assinatura').value || '';
+      const [yyyy,mm,dd] = (iso || '').split('-');
+      const dataStr = `${dd||String(new Date().getDate()).padStart(2,'0')}${mm||String(new Date().getMonth()+1).padStart(2,'0')}${yyyy||String(new Date().getFullYear())}`;
+      const filename = `PARQ_${slugUpper(document.getElementById('nome').value)}_${dataStr}.pdf`;
+      pdf.save(filename);
     }
 
     // eventos
     ['nome','cpf','data_assinatura'].forEach(id => {
-  const el = $('#'+id);
-  if(!el) return;
-  if(id==='nome'){
-    el.addEventListener('input', (e)=>{
-      const i = e.target;
-      const s = i.selectionStart, epos = i.selectionEnd;
-      i.value = (i.value||'').toLocaleUpperCase('pt-BR');
-      try{ i.setSelectionRange(s, epos); }catch(_){/* iOS may ignore */}
-      renderPreview();
+      const el=$( '#'+id );
+      if(el){ el.addEventListener('input', renderPreview); el.addEventListener('change', renderPreview); }
     });
-  } else {
-    el.addEventListener('input', renderPreview);
-  }
-  el.addEventListener('change', renderPreview);
-});
     document.getElementById('cpf').addEventListener('input', (e)=> e.target.value = maskCPF(e.target.value));
-    for(let i=1;i<=7;i++){
-      document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview));
-    }
-    // clique em toda a "pill" de opção
-    document.querySelectorAll('.seg').forEach(lbl => {
-      lbl.addEventListener('click', (e)=>{
-        const input = lbl.querySelector('input[type="radio"]');
-        if (!input) return;
-        if (!input.checked){
-          input.checked = true;
-          input.dispatchEvent(new Event('change',{bubbles:true}));
-        }
-      });
-    });
+    for(let i=1;i<=7;i++){ document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview)); }
+    document.getElementById('btnPDF').addEventListener('click', (e)=>{ e.preventDefault(); generatePDF(); });
+    document.getElementById('btnReset').addEventListener('click', (e)=>{ e.preventDefault(); if(confirm('Limpar todos os campos?')) location.reload(); });
 
     setTodayBR();
     renderPreview();
