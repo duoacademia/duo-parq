@@ -65,9 +65,15 @@
     .sheet .sign-box{flex:1}
     .sheet .line{height:1px;background:#ccc;margin:6px 0}
     .sheet .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-    .sheet .brand{display:flex; align-items:center; gap:10px}
-    .sheet .brand img.logo{height:38px; width:auto; display:block}
-
+.sheet .brand{display:flex; align-items:flex-start; gap:10px;}
+.sheet .brand img.logo{height:34px; width:auto; display:block;} /* 34–38px, ajuste à vontade */
+.sheet .brand small{
+  font-size:8px;     /* 11, 10, 9… */
+  line-height:1.2;    /* mais juntinho */
+  margin-top:2px;     /* aproxima do h3 */
+  display:block;
+}
+.sheet .brand h3{ margin:0 0 4px; } /* opcional: reduz espaço abaixo do título */
     /* Radios segmentados */
     .opts{display:inline-flex; gap:10px; align-items:center; flex-wrap:nowrap}
     .seg{display:inline-flex; align-items:center; border-radius:999px; overflow:hidden}
