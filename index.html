@@ -87,10 +87,6 @@
       text-rendering: optimizeLegibility;
     }
 
-    
-    /* Auto-uppercase texto digitado */
-    input[type="text"], input:not([type]) { text-transform: uppercase; }
-
     /* ==== Mobile: empilhar campos ==== */
     @media (max-width:760px){
       .grid{ grid-template-columns: 1fr; }
@@ -288,7 +284,6 @@
     const $ = (s) => document.querySelector(s);
     const onlyDigits = (v) => (v||'').replace(/\D+/g,'');
     const docId = () => new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
-    const U = (s)=> (s||'').toLocaleUpperCase('pt-BR');
     function slugUpper(s){
       return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
     }
@@ -400,7 +395,7 @@
       const nome = $('#nome').value.trim();
       const cpf = $('#cpf').value.trim();
       const data = $('#data_assinatura').value;
-      $('#pv_nome').textContent = U(nome);
+      $('#pv_nome').textContent = nome;
       $('#pv_cpf').textContent = cpf;
       if (data) $('#doc_data').textContent = new Intl.DateTimeFormat('pt-BR').format(new Date(data));
 
@@ -468,13 +463,6 @@
     ['nome','cpf','data_assinatura'].forEach(id => { const el=document.getElementById(id); el && el.addEventListener('input', renderPreview); el && el.addEventListener('change', renderPreview); });
     document.getElementById('cpf').addEventListener('input', (e)=> e.target.value = maskCPF(e.target.value));
     for(let i=1;i<=7;i++){ document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview)); }
-
-    // Delegated change handler: qualquer mudança em q1..q7 atualiza a prévia e o Anexo II
-    document.addEventListener('change', (e)=>{
-      const t = e.target;
-      if (t && /^q[1-7]$/.test(t.name)) { renderPreview(); }
-    });
-
     document.getElementById('btnPDF').addEventListener('click', (e)=>{ e.preventDefault(); generatePDF(); });
     document.getElementById('btnReset').addEventListener('click', (e)=>{ e.preventDefault(); if(confirm('Limpar todos os campos?')) location.reload(); });
 
