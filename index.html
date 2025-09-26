@@ -44,7 +44,9 @@
     footer{margin-top:20px;font-size:12px;color:var(--muted);text-align:center}
 
     /* Printable area */
-    .sheet{background:white;color:#111; width:794px; min-height:1123px; padding:28mm 20mm; border:1px solid #ddd; border-radius:6px; box-shadow:0 4px 30px rgba(0,0,0,.15);}
+    .sheet{background:white;color:#111; width:794px; min-height:1123px; padding:28mm 20mm; border:1px solid #ddd; border-radius:6px; box-shadow:0 4px 30px rgba(0,0,0,.15);
+      word-spacing: .06em; letter-spacing: .01em; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; font-kerning: normal; hyphens: none; word-break: normal; overflow-wrap: anywhere;
+    }
     .sheet h3, .sheet th, .sheet strong, .sheet .title-tight { word-spacing: .08em; letter-spacing: .02em; }
     .sheet h3{margin:0 0 8px}
     .sheet small{color:#555}
@@ -75,27 +77,6 @@
       .q{grid-template-columns: 1fr}
       .opts{gap:8px}
     }
-
-    /* ==== FIXES para PDF (kerning/colagem) — só na área imprimível ==== */
-    #printArea, #printArea *{
-      font-family: Arial, Helvetica, sans-serif;
-      font-kerning: none;
-      letter-spacing: .2px;
-      word-spacing: .4px;
-      line-height: 1.25;
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-    }
-
-    /* ==== Mobile: empilhar campos ==== */
-    @media (max-width:760px){
-      .grid{ grid-template-columns: 1fr; }
-      .row{ grid-template-columns: 1fr !important; gap: 10px; }
-      .buttons{ flex-direction: column; }
-      .preview{ position: static; }
-      canvas{ height: 180px; }
-      input,select,textarea{ font-size: 16px; } /* evita zoom no iOS */
-    }
   </style>
 </head>
 <body>
@@ -105,7 +86,7 @@
         <h1>DUO Academia · PAR-Q (Questionário de Prontidão Para Atividade Física)</h1>
         <div class="badge">Preencha o PAR-Q. Se houver alguma resposta “SIM”, aceite o termo e assine; depois gere o PDF.</div>
       </div>
-      <div class="badge">v1.3 (PAR-Q)</div>
+      <div class="badge">v1.2 (PAR‑Q)</div>
     </header>
 
     <div class="grid">
@@ -183,7 +164,7 @@
         <div id="anexo2_card" class="card" style="margin-top:14px; display:none; background:#0b1220">
           <h2>Anexo II — Termo de responsabilidade</h2>
           <div style="font-size:13px; line-height:1.5; margin-bottom:8px">
-            Estou ciente de que é recomendável conversar com um médico antes de aumentar meu nível atual de atividade física, por ter respondido “SIM” a uma ou mais perguntas do PAR-Q. Assumo plena responsabilidade por qualquer atividade física praticada sem o atendimento a essa recomendação.
+            Estou ciente de que é recomendável conversar com um médico antes de aumentar meu nível atual de atividade física, por ter respondido “SIM” a uma ou mais perguntas do PAR‑Q. Assumo plena responsabilidade por qualquer atividade física praticada sem o atendimento a essa recomendação.
           </div>
           <label class="checkbox">
             <input id="aceite" class="ck" type="checkbox">
@@ -226,7 +207,7 @@
 
           <div class="section">
             <table>
-              <tr><th colspan="2">ANEXO I — QUESTIONÁRIO DE PRONTIDÃO PARA ATIVIDADE FÍSICA (PAR-Q)</th></tr>
+              <tr><th colspan="2">ANEXO I — QUESTIONÁRIO DE PRONTIDÃO PARA ATIVIDADE FÍSICA (PAR‑Q)</th></tr>
               <tr><td style="width:26%">Nome completo</td><td id="pv_nome"></td></tr>
               <tr><td>CPF</td><td id="pv_cpf"></td></tr>
               <tr><td colspan="2" style="font-size:12.5px">
@@ -252,7 +233,7 @@
             <table>
               <tr><th colspan="1">ANEXO II — TERMO DE RESPONSABILIDADE (assinar somente se houve “SIM”)</th></tr>
               <tr><td style="font-size:13px">
-                Estou ciente de que é recomendável conversar com um médico antes de aumentar meu nível atual de atividade física, por ter respondido “SIM” a uma ou mais perguntas do PAR-Q. Assumo plena responsabilidade por qualquer atividade física praticada sem o atendimento a essa recomendação.
+                Estou ciente de que é recomendável conversar com um médico antes de aumentar meu nível atual de atividade física, por ter respondido “SIM” a uma ou mais perguntas do PAR‑Q. Assumo plena responsabilidade por qualquer atividade física praticada sem o atendimento a essa recomendação.
               </td></tr>
               <tr>
                 <td>
@@ -282,21 +263,18 @@
 
   <script>
     const $ = (s) => document.querySelector(s);
-    const onlyDigits = (v) => (v||'').replace(/\D+/g,'');
     const docId = () => new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
-    function slugUpper(s){
-      return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
-    }
+    const onlyDigits = (v) => (v||'').replace(/\\D+/g,'');
     const maskCPF = (v) => {
       v = onlyDigits(v).slice(0,11);
-      return v.replace(/(\d{3})(\d)/, '$1.$2')
-              .replace(/(\d{3})(\d)/, '$1.$2')
-              .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      return v.replace(/(\\d{3})(\\d)/, '$1.$2')
+              .replace(/(\\d{3})(\\d)/, '$1.$2')
+              .replace(/(\\d{3})(\\d{1,2})$/, '$1-$2');
     };
     function isValidCPF(cpf){
       cpf = onlyDigits(cpf);
       if (cpf.length !== 11) return false;
-      if (/^(\d)\1{10}$/.test(cpf)) return false;
+      if (/^(\\d)\\1{10}$/.test(cpf)) return false;
       let sum = 0, rest;
       for (let i=1;i<=9;i++) sum += parseInt(cpf.substring(i-1,i)) * (11 - i);
       rest = (sum * 10) % 11; if (rest === 10 || rest === 11) rest = 0; if (rest !== parseInt(cpf.substring(9,10))) return false;
@@ -325,59 +303,27 @@
       }
     }
 
-    // assinatura
+    // signature
     let signaturePad, canvas;
-    function resizeCanvasForHiDPI(){
-      if (!canvas) return;
+    function ensureSignaturePad(){
+      if (signaturePad) return;
+      canvas = document.getElementById('signaturePad');
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width * ratio;
       canvas.height = rect.height * ratio;
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(ratio,0,0,ratio,0,0);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0,0,rect.width,rect.height);
-    }
-    function ensureSignaturePad(){
-      if (signaturePad) return;
-      canvas = document.getElementById('signaturePad');
-      resizeCanvasForHiDPI();
-      signaturePad = new SignaturePad(canvas, { backgroundColor:'rgba(0,0,0,0)', penColor:'#111827', minWidth:0.7, maxWidth:2.2, throttle:0 });
-      const prevent=(e)=>e.preventDefault();
-      canvas.addEventListener('touchstart', prevent, {passive:false});
-      canvas.addEventListener('touchmove', prevent, {passive:false});
-      canvas.addEventListener('touchend', prevent, {passive:false});
+      const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
+      signaturePad = new SignaturePad(canvas, { backgroundColor:'#fff', penColor:'#111827', minWidth:0.7, maxWidth:2.2, throttle:0 });
       canvas.addEventListener('mouseup', renderPreview);
       canvas.addEventListener('touchend', renderPreview);
-      document.getElementById('btnLimpar')?.addEventListener('click', (e)=>{ e.preventDefault(); signaturePad.clear(); renderPreview(); });
+      $('#btnLimpar').addEventListener('click', (e)=>{ e.preventDefault(); signaturePad.clear(); renderPreview(); });
       window.addEventListener('resize', ()=>{
         const data = signaturePad.toData();
-        resizeCanvasForHiDPI();
-        signaturePad.clear();
-        if (data && data.length) signaturePad.fromData(data);
-      });
-    }
-    function cropTransparent(dataURL, padding=6, threshold=1){
-      return new Promise(resolve=>{
-        const img = new Image();
-        img.onload = ()=>{
-          const w=img.width,h=img.height;
-          const c=document.createElement('canvas'); c.width=w; c.height=h;
-          const ctx=c.getContext('2d',{willReadFrequently:true}); ctx.drawImage(img,0,0);
-          const dt=ctx.getImageData(0,0,w,h).data;
-          let top=h,left=w,right=0,bottom=0;
-          for(let y=0;y<h;y++) for(let x=0;x<w;x++){
-            const a=dt[(y*w+x)*4+3]; if(a>threshold){ if(x<left)left=x; if(x>right)right=x; if(y<top)top=y; if(y>bottom)bottom=y; }
-          }
-          if(right<left||bottom<top){ resolve(''); return; }
-          left=Math.max(0,left-padding); top=Math.max(0,top-padding);
-          right=Math.min(w-1,right+padding); bottom=Math.min(h-1,bottom+padding);
-          const cw=right-left+1,ch=bottom-top+1;
-          const c2=document.createElement('canvas'); c2.width=cw; c2.height=ch;
-          c2.getContext('2d').drawImage(c,left,top,cw,ch,0,0,cw,ch);
-          resolve(c2.toDataURL('image/png'));
-        };
-        img.src = dataURL;
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = rect.width * ratio; canvas.height = rect.height * ratio;
+        const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
+        signaturePad.clear(); signaturePad.fromData(data);
       });
     }
 
@@ -391,7 +337,7 @@
     }
     function anyYes(a){ return Object.values(a).some(v => v==='S'); }
 
-    async function renderPreview(){
+    function renderPreview(){
       const nome = $('#nome').value.trim();
       const cpf = $('#cpf').value.trim();
       const data = $('#data_assinatura').value;
@@ -401,31 +347,26 @@
 
       const a = answers();
       for(let i=1;i<=7;i++){
-        document.getElementById('p'+i+'s').textContent = a['q'+i]==='S' ? 'X' : '';
-        document.getElementById('p'+i+'n').textContent = a['q'+i]==='N' ? 'X' : '';
+        $('#p'+i+'s').textContent = a['q'+i]==='S' ? 'X' : '';
+        $('#p'+i+'n').textContent = a['q'+i]==='N' ? 'X' : '';
       }
 
       const precisa = anyYes(a);
-      document.getElementById('anexo2_card').style.display = precisa ? 'block' : 'none';
-      document.getElementById('anexo2_sheet').style.display = precisa ? 'block' : 'none';
+      $('#anexo2_card').style.display = precisa ? 'block' : 'none';
+      $('#anexo2_sheet').style.display = precisa ? 'block' : 'none';
 
-      const img = document.getElementById('pv_assinatura');
+      const img = $('#pv_assinatura');
       if (precisa){
         ensureSignaturePad();
-        if (signaturePad && !signaturePad.isEmpty()){
-          const png = await cropTransparent(signaturePad.toDataURL('image/png'), 6);
-          img.src = png;
-        }else{
-          img.src = '';
-        }
+        img.src = signaturePad && !signaturePad.isEmpty() ? signaturePad.toDataURL('image/png') : '';
       }else{
         img.src = '';
       }
     }
 
     async function generatePDF(){
-      const nome = document.getElementById('nome').value.trim();
-      const cpf = document.getElementById('cpf').value.trim();
+      const nome = $('#nome').value.trim();
+      const cpf = $('#cpf').value.trim();
       if (!nome) { alert('Informe o seu nome completo.'); return; }
       if (!isValidCPF(cpf)) { alert('CPF inválido.'); return; }
 
@@ -433,12 +374,12 @@
       const precisa = anyYes(a);
 
       if (precisa){
-        if (!document.getElementById('aceite').checked){ alert('Você precisa aceitar o termo do Anexo II.'); return; }
+        if (!$('#aceite').checked){ alert('Você precisa aceitar o termo do Anexo II.'); return; }
         if (!signaturePad || signaturePad.isEmpty()){ alert('Assine no quadro para continuar.'); return; }
       }
 
-      document.getElementById('doc_id').textContent = docId();
-      await renderPreview();
+      $('#doc_id').textContent = docId();
+      renderPreview();
 
       const area = document.getElementById('printArea');
       const canvasImg = await html2canvas(area, { scale: 2, useCORS: true });
@@ -448,19 +389,12 @@
       const pageWidth = pdf.internal.pageSize.getWidth();
       const w = pageWidth - 20, h = (canvasImg.height * w) / canvasImg.width;
       pdf.addImage(imgData, 'PNG', 10, 10, w, h, undefined, 'FAST');
-      const [y,m,d] = (document.getElementById('data_assinatura').value || '').split('-');
-      const hoje = new Date();
-      const dd = (d || String(hoje.getDate()).padStart(2,'0'));
-      const mm2 = (m || String(hoje.getMonth()+1).padStart(2,'0'));
-      const yy = (y || String(hoje.getFullYear()));
-      const dataStr = f"{dd}{mm2}{yy}"
-      # use JS string template in final HTML; we fix this in a moment
-      const dataStr = `${dd}${mm2}${yy}`;
-      const filename = `DUO_PARQ_${slugUpper(nome)}_${dataStr}.pdf`;
+      const filename = `DUO_PARQ_${document.getElementById('doc_id').textContent}.pdf`;
       pdf.save(filename);
     }
 
-    ['nome','cpf','data_assinatura'].forEach(id => { const el=document.getElementById(id); el && el.addEventListener('input', renderPreview); el && el.addEventListener('change', renderPreview); });
+    // eventos
+    ['nome','cpf','data_assinatura'].forEach(id => { const el=$( '#'+id ); el && el.addEventListener('input', renderPreview); el && el.addEventListener('change', renderPreview); });
     document.getElementById('cpf').addEventListener('input', (e)=> e.target.value = maskCPF(e.target.value));
     for(let i=1;i<=7;i++){ document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview)); }
     document.getElementById('btnPDF').addEventListener('click', (e)=>{ e.preventDefault(); generatePDF(); });
