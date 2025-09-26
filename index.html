@@ -66,9 +66,9 @@
 
     /* Radios segmentados */
     .opts{display:inline-flex; gap:10px; align-items:center; flex-wrap:nowrap}
-    .seg{display:inline-flex; align-items:center; border-radius:999px; overflow:hidden}
-    .seg input{position:absolute; opacity:0; pointer-events:none}
-    .seg span{display:inline-block; padding:8px 16px; border:1px solid #334155; border-radius:999px; background:#0b1220; color:#e5e7eb; font-weight:700; line-height:1; user-select:none; cursor:pointer;}
+    .seg{display:inline-flex; align-items:center; border-radius:999px; overflow:hidden; cursor:pointer}
+    .seg input{position:absolute; opacity:0;}
+    .seg span{display:inline-block; padding:8px 16px; border:1px solid #334155; border-radius:999px; background:#0b1220; color:#e5e7eb; font-weight:700; line-height:1; user-select:none;}
     .seg input:focus + span{box-shadow:0 0 0 3px rgba(59,130,246,.35)}
     .seg input:checked + span{background:var(--brand); color:white; border-color:var(--brand)}
     .q{display:grid; grid-template-columns: 1fr auto; align-items:center; gap:14px; padding:12px 0; border-bottom:1px dashed #2a3346}
@@ -77,6 +77,11 @@
       .q{grid-template-columns: 1fr}
       .opts{gap:8px}
     }
+
+    /* Maiúsculas no texto digitado */
+    input[type="text"], input:not([type]) { text-transform: uppercase; }
+    /* Fix leve de kerning apenas na área imprimível */
+    #printArea, #printArea *{ font-kerning:none; letter-spacing:.2px; word-spacing:.3px; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
   </style>
 </head>
 <body>
@@ -86,7 +91,7 @@
         <h1>DUO Academia · PAR-Q (Questionário de Prontidão Para Atividade Física)</h1>
         <div class="badge">Preencha o PAR-Q. Se houver alguma resposta “SIM”, aceite o termo e assine; depois gere o PDF.</div>
       </div>
-      <div class="badge">v1.2 (PAR‑Q)</div>
+      <div class="badge">v1.2.1 (PAR‑Q)</div>
     </header>
 
     <div class="grid">
@@ -264,17 +269,19 @@
   <script>
     const $ = (s) => document.querySelector(s);
     const docId = () => new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
-    const onlyDigits = (v) => (v||'').replace(/\\D+/g,'');
+    const onlyDigits = (v) => (v||'').replace(/\D+/g,'');
+    const U = (s)=> (s||'').toLocaleUpperCase('pt-BR');
+
     const maskCPF = (v) => {
       v = onlyDigits(v).slice(0,11);
-      return v.replace(/(\\d{3})(\\d)/, '$1.$2')
-              .replace(/(\\d{3})(\\d)/, '$1.$2')
-              .replace(/(\\d{3})(\\d{1,2})$/, '$1-$2');
+      return v.replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
     };
     function isValidCPF(cpf){
       cpf = onlyDigits(cpf);
       if (cpf.length !== 11) return false;
-      if (/^(\\d)\\1{10}$/.test(cpf)) return false;
+      if (/^(\d)\1{10}$/.test(cpf)) return false;
       let sum = 0, rest;
       for (let i=1;i<=9;i++) sum += parseInt(cpf.substring(i-1,i)) * (11 - i);
       rest = (sum * 10) % 11; if (rest === 10 || rest === 11) rest = 0; if (rest !== parseInt(cpf.substring(9,10))) return false;
@@ -331,17 +338,21 @@
       const a = {};
       for(let i=1;i<=7;i++){
         const v = document.querySelector(`input[name="q${i}"]:checked`);
-        a[`q${i}`] = v ? v.value : '';
+        a[`q${i}`] = v ? (v.value||'').toUpperCase() : '';
       }
       return a;
     }
     function anyYes(a){ return Object.values(a).some(v => v==='S'); }
 
     function renderPreview(){
-      const nome = $('#nome').value.trim();
+      // força o campo NOME a ficar em maiúsculas enquanto digita
+      const nomeInput = $('#nome');
+      if (nomeInput && nomeInput.value) nomeInput.value = U(nomeInput.value);
+
+      const nome = nomeInput ? nomeInput.value.trim() : '';
       const cpf = $('#cpf').value.trim();
       const data = $('#data_assinatura').value;
-      $('#pv_nome').textContent = nome;
+      $('#pv_nome').textContent = U(nome);
       $('#pv_cpf').textContent = cpf;
       if (data) $('#doc_data').textContent = new Intl.DateTimeFormat('pt-BR').format(new Date(data));
 
@@ -365,7 +376,7 @@
     }
 
     async function generatePDF(){
-      const nome = $('#nome').value.trim();
+      const nome = ($('#nome').value||'').trim();
       const cpf = $('#cpf').value.trim();
       if (!nome) { alert('Informe o seu nome completo.'); return; }
       if (!isValidCPF(cpf)) { alert('CPF inválido.'); return; }
@@ -394,11 +405,27 @@
     }
 
     // eventos
-    ['nome','cpf','data_assinatura'].forEach(id => { const el=$( '#'+id ); el && el.addEventListener('input', renderPreview); el && el.addEventListener('change', renderPreview); });
+    ['nome','cpf','data_assinatura'].forEach(id => {
+      const el=$( '#'+id );
+      if(!el) return;
+      el.addEventListener('input', renderPreview);
+      el.addEventListener('change', renderPreview);
+    });
     document.getElementById('cpf').addEventListener('input', (e)=> e.target.value = maskCPF(e.target.value));
-    for(let i=1;i<=7;i++){ document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview)); }
-    document.getElementById('btnPDF').addEventListener('click', (e)=>{ e.preventDefault(); generatePDF(); });
-    document.getElementById('btnReset').addEventListener('click', (e)=>{ e.preventDefault(); if(confirm('Limpar todos os campos?')) location.reload(); });
+    for(let i=1;i<=7;i++){
+      document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview));
+    }
+    // clique em toda a "pill" de opção
+    document.querySelectorAll('.seg').forEach(lbl => {
+      lbl.addEventListener('click', (e)=>{
+        const input = lbl.querySelector('input[type="radio"]');
+        if (!input) return;
+        if (!input.checked){
+          input.checked = true;
+          input.dispatchEvent(new Event('change',{bubbles:true}));
+        }
+      });
+    });
 
     setTodayBR();
     renderPreview();
