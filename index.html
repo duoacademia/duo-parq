@@ -56,8 +56,7 @@
     #pv_questions th:nth-child(2), #pv_questions th:nth-child(3),
     #pv_questions td:nth-child(2), #pv_questions td:nth-child(3){ width:10.5%; text-align:center; }
     #pv_questions td.sn{font-size:18px; font-weight:800; letter-spacing:.05em}
-    .sheet #pv_nome{text-transform: uppercase;}
-.sheet .sign-img{width:100%; height:auto; max-height:130px; border:none; border-radius:0; object-fit:contain; display:block; margin:0 auto}
+    .sheet .sign-img{width:100%; height:auto; max-height:210px; border:1px solid #ccc;border-radius:4px;object-fit:contain; display:block; margin:0 auto}
     .sheet .sign-area{display:flex; gap:16px; align-items:flex-end; margin-top:18px}
     .sheet .sign-box{flex:1}
     .sheet .line{height:1px;background:#ccc;margin:6px 0}
@@ -104,11 +103,10 @@
             <div class="help">Obrigatório</div>
           </div>
         </div>
-        <!-- Data: oculta e não-editável -->
-        <div class="row" style="display:none">
+        <div class="row">
           <div>
             <label for="data_assinatura">Data</label>
-            <input id="data_assinatura" type="hidden"/>
+            <input id="data_assinatura" type="date"/>
           </div>
         </div>
 
@@ -266,17 +264,17 @@
   <script>
     const $ = (s) => document.querySelector(s);
     const docId = () => new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
-    const onlyDigits = (v) => (v||'').replace(/\D+/g,'');
+    const onlyDigits = (v) => (v||'').replace(/\\D+/g,'');
     const maskCPF = (v) => {
       v = onlyDigits(v).slice(0,11);
-      return v.replace(/(\d{3})(\d)/, '$1.$2')
-              .replace(/(\d{3})(\d)/, '$1.$2')
-              .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      return v.replace(/(\\d{3})(\\d)/, '$1.$2')
+              .replace(/(\\d{3})(\\d)/, '$1.$2')
+              .replace(/(\\d{3})(\\d{1,2})$/, '$1-$2');
     };
     function isValidCPF(cpf){
       cpf = onlyDigits(cpf);
       if (cpf.length !== 11) return false;
-      if (/^(\d)\1{10}$/.test(cpf)) return false;
+      if (/^(\\d)\\1{10}$/.test(cpf)) return false;
       let sum = 0, rest;
       for (let i=1;i<=9;i++) sum += parseInt(cpf.substring(i-1,i)) * (11 - i);
       rest = (sum * 10) % 11; if (rest === 10 || rest === 11) rest = 0; if (rest !== parseInt(cpf.substring(9,10))) return false;
@@ -290,11 +288,6 @@
     const logoSrc = urlParamLogo || DEFAULT_LOGO;
     (function setLogo(){ const img=$('#sheet_logo'); if(img){img.src=logoSrc; img.setAttribute('crossorigin','anonymous');} })();
 
-    // helper para nome do arquivo
-    function slugUpper(s){
-      return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
-    }
-
     function setTodayBR(){
       try{
         const parts = new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Fortaleza', day:'2-digit', month:'2-digit', year:'numeric'}).formatToParts(new Date());
@@ -302,8 +295,8 @@
         const mm = parts.find(p=>p.type==='month').value;
         const yyyy = parts.find(p=>p.type==='year').value;
         const iso = `${yyyy}-${mm}-${dd}`;
-        $('#data_assinatura').value = iso;            // hidden e imutável
-        $('#doc_data').textContent = `${dd}/${mm}/${yyyy}`; // cabeçalho da prévia
+        $('#data_assinatura').value = iso;
+        $('#doc_data').textContent = `${dd}/${mm}/${yyyy}`;
       }catch(e){
         const t=new Date(), yyyy=t.getFullYear(), mm=String(t.getMonth()+1).padStart(2,'0'), dd=String(t.getDate()).padStart(2,'0');
         const iso=`${yyyy}-${mm}-${dd}`; $('#data_assinatura').value=iso; $('#doc_data').textContent=`${dd}/${mm}/${yyyy}`;
@@ -347,8 +340,8 @@
     function renderPreview(){
       const nome = $('#nome').value.trim();
       const cpf = $('#cpf').value.trim();
-      const data = $('#data_assinatura').value; // hidden
-      $('#pv_nome').textContent = U(nome);
+      const data = $('#data_assinatura').value;
+      $('#pv_nome').textContent = nome;
       $('#pv_cpf').textContent = cpf;
       if (data) $('#doc_data').textContent = new Intl.DateTimeFormat('pt-BR').format(new Date(data));
 
@@ -396,20 +389,12 @@
       const pageWidth = pdf.internal.pageSize.getWidth();
       const w = pageWidth - 20, h = (canvasImg.height * w) / canvasImg.width;
       pdf.addImage(imgData, 'PNG', 10, 10, w, h, undefined, 'FAST');
-
-      // Nome do arquivo: PARQ_<NOME>_<DDMMAAAA>.pdf
-      const iso = document.getElementById('data_assinatura').value || '';
-      const [yyyy,mm,dd] = (iso || '').split('-');
-      const dataStr = `${dd||String(new Date().getDate()).padStart(2,'0')}${mm||String(new Date().getMonth()+1).padStart(2,'0')}${yyyy||String(new Date().getFullYear())}`;
-      const filename = `PARQ_${slugUpper(document.getElementById('nome').value)}_${dataStr}.pdf`;
+      const filename = `DUO_PARQ_${document.getElementById('doc_id').textContent}.pdf`;
       pdf.save(filename);
     }
 
     // eventos
-    ['nome','cpf','data_assinatura'].forEach(id => {
-      const el=$( '#'+id );
-      if(el){ el.addEventListener('input', renderPreview); el.addEventListener('change', renderPreview); }
-    });
+    ['nome','cpf','data_assinatura'].forEach(id => { const el=$( '#'+id ); el && el.addEventListener('input', renderPreview); el && el.addEventListener('change', renderPreview); });
     document.getElementById('cpf').addEventListener('input', (e)=> e.target.value = maskCPF(e.target.value));
     for(let i=1;i<=7;i++){ document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview)); }
     document.getElementById('btnPDF').addEventListener('click', (e)=>{ e.preventDefault(); generatePDF(); });
