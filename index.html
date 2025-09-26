@@ -108,10 +108,10 @@
             <div class="help">Obrigatório</div>
           </div>
         </div>
-        <div class="row">
+        <div class="row" style="display:none">
           <div>
             <label for="data_assinatura">Data</label>
-            <input id="data_assinatura" type="date"/>
+            <input id="data_assinatura" type="hidden"/>
           </div>
         </div>
 
@@ -271,6 +271,10 @@
     const docId = () => new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
     const onlyDigits = (v) => (v||'').replace(/\D+/g,'');
     const U = (s)=> (s||'').toLocaleUpperCase('pt-BR');
+function slugUpper(s){
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase().replace(/[^A-Z0-9]+/g,'');
+}
 
     const maskCPF = (v) => {
       v = onlyDigits(v).slice(0,11);
@@ -400,8 +404,11 @@
       const pageWidth = pdf.internal.pageSize.getWidth();
       const w = pageWidth - 20, h = (canvasImg.height * w) / canvasImg.width;
       pdf.addImage(imgData, 'PNG', 10, 10, w, h, undefined, 'FAST');
-      const filename = `DUO_PARQ_${document.getElementById('doc_id').textContent}.pdf`;
-      pdf.save(filename);
+      const iso = (document.getElementById('data_assinatura').value||'');
+const [yy,mm,dd] = iso.split('-');
+const dataStr = `${dd||new Date().getDate().toString().padStart(2,'0')}${mm||String(new Date().getMonth()+1).padStart(2,'0')}${yy||String(new Date().getFullYear())}`;
+const filename = `PARQ_${slugUpper(document.getElementById('nome').value)}_${dataStr}.pdf`;
+pdf.save(filename);
     }
 
     // eventos
