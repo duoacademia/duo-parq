@@ -4,8 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PAR-Q — DUO Academia</title>
-  <meta name="description" content="Questionário PAR-Q com validação, geração de PDF e envio rápido por WhatsApp." />
-  <!-- jsPDF para gerar PDF (CDN leve) -->
+  <meta name="description" content="Questionário PAR-Q com validação, termo de concordância, geração de PDF e envio por WhatsApp." />
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <style>
     :root{
@@ -32,6 +31,15 @@
       color:#fecaca;border-left:6px solid var(--danger);border-radius:10px;padding:12px 14px;margin:12px 0
     }
     .success{color:var(--ok);font-weight:600}
+    /* Termo de concordância */
+    .termo{
+      display:none;border:1px dashed var(--warn);border-radius:10px;padding:12px 14px;background:#0b1324;margin-top:12px
+    }
+    .termo h3{margin:0 0 6px;font-size:16px;color:#fde68a}
+    .termo p{margin:6px 0 12px;color:#eab308}
+    .termo .controls{display:grid;gap:10px}
+    input[type="text"]{width:100%;background:#0b1324;border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:10px}
+    label.small{font-size:13px;color:var(--muted)}
     /* Mini-modal de envio */
     .send-modal{
       display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
@@ -45,17 +53,15 @@
     .send-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
     .send-option{width:100%;text-align:center;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1324}
     .close-x{float:right;background:transparent;border:0;color:var(--muted);font-size:18px;cursor:pointer}
-    input[type="text"]{width:100%;background:#0b1324;border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:10px}
-    label.small{font-size:13px;color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="container">
     <div class="panel">
       <h1>PAR-Q — DUO Academia</h1>
-      <p class="muted">Responda às 7 perguntas obrigatórias. Ao final, gere o PDF e escolha para qual unidade enviar.</p>
+      <p class="muted">Responda às 7 perguntas obrigatórias. Se marcar “Sim” em qualquer uma, leia e aceite o termo e informe sua rubrica (iniciais). Ao final, gere o PDF e escolha a unidade para envio.</p>
 
-      <!-- Identificação básica para o PDF -->
+      <!-- Identificação básica -->
       <div class="row" style="gap:10px;margin-bottom:8px">
         <div style="flex:1 1 220px">
           <label class="small">Nome completo</label>
@@ -72,7 +78,6 @@
 
       <!-- PERGUNTAS (7 obrigatórias) -->
       <form id="parqForm">
-        <!-- Exemplo de pergunta: use name únicos q1..q7 (radio) -->
         <fieldset data-required>
           <legend>1) Alguma vez um médico já lhe disse que você possui um problema no coração?</legend>
           <div class="row">
@@ -123,9 +128,25 @@
           </div>
         </fieldset>
 
+        <!-- TERMO DE CONCORDÂNCIA (aparece se qualquer resposta = "Sim") -->
+        <div id="termoBox" class="termo" aria-hidden="true">
+          <h3>Termo de Responsabilidade</h3>
+          <p>
+            Você assinalou pelo menos uma resposta “Sim”. Confirmo que estou ciente de que devo buscar avaliação médica
+            antes de iniciar ou prosseguir atividades físicas. Concordo em seguir as orientações profissionais da DUO Academia.
+          </p>
+          <div class="controls">
+            <label><input type="checkbox" id="termo_check" /> Li e concordo com o termo acima.</label>
+            <div>
+              <label class="small" for="rubrica">Rubrica (iniciais) — obrigatória quando houver “Sim”</label>
+              <input type="text" id="rubrica" placeholder="Ex.: JAS" maxlength="8" />
+            </div>
+          </div>
+        </div>
+
         <div class="actions">
           <button type="button" id="btnGerar">Gerar PDF</button>
-          <button type="reset" class="secondary">Limpar</button>
+          <button type="reset" class="secondary" id="btnReset">Limpar</button>
         </div>
       </form>
     </div>
@@ -141,8 +162,8 @@
         <button class="send-option" onclick="handleSend('heliopolis')">Unidade Heliópolis</button>
       </div>
       <p class="muted" style="margin-top:10px">
-        Dica: no desktop, o arquivo é baixado e o WhatsApp Web abre com a mensagem pronta;
-        basta anexar o PDF baixado. Em muitos celulares, o compartilhamento envia o PDF direto.
+        No desktop: o PDF baixa e o WhatsApp Web abre com mensagem pronta; anexe o arquivo baixado.
+        Em muitos celulares, o compartilhamento envia o PDF direto.
       </p>
     </div>
   </div>
@@ -154,7 +175,19 @@
       heliopolis: "5587996660021"
     };
 
-    // Utilitário: valida se as 7 perguntas com data-required foram respondidas
+    // ====== UTILITÁRIOS DE UI ======
+    const errorBox = document.getElementById('errorBox');
+    function showError(msg) {
+      errorBox.innerHTML = msg;
+      errorBox.style.display = 'block';
+      errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    function hideError(){ errorBox.style.display='none'; }
+
+    function showSendModal(){ document.getElementById('sendModal').style.display='flex'; }
+    function hideSendModal(){ document.getElementById('sendModal').style.display='none'; }
+
+    // ====== LÓGICA DE VALIDAÇÃO ======
     function validateRequiredQuestions() {
       const sets = Array.from(document.querySelectorAll('fieldset[data-required]'));
       const unanswered = [];
@@ -166,20 +199,40 @@
       return { ok: unanswered.length === 0, missing: unanswered };
     }
 
-    // Mostra / esconde a caixa de erro
-    function showError(msg) {
-      const box = document.getElementById('errorBox');
-      box.innerHTML = msg;
-      box.style.display = 'block';
-      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    function anyAnswerYes() {
+      for (let i = 1; i <= 7; i++) {
+        const checked = document.querySelector(`input[name="q${i}"]:checked`);
+        if (checked && checked.value === 'Sim') return true;
+      }
+      return false;
     }
-    function hideError(){ const box = document.getElementById('errorBox'); box.style.display='none'; }
 
-    // Modal ENVIAR PARA
-    function showSendModal(){ document.getElementById('sendModal').style.display='flex'; }
-    function hideSendModal(){ document.getElementById('sendModal').style.display='none'; }
+    // Mostra/oculta bloco do termo conforme respostas
+    const termoBox = document.getElementById('termoBox');
+    const termoCheck = document.getElementById('termo_check');
+    const rubricaInput = document.getElementById('rubrica');
 
-    // Gera o PDF (retorna { blob, filename, textSummary })
+    function updateTermoVisibility(reset=false){
+      if (reset) {
+        termoBox.style.display = 'none';
+        termoBox.setAttribute('aria-hidden','true');
+        termoCheck.checked = false;
+        rubricaInput.value = '';
+        return;
+      }
+      const precisa = anyAnswerYes();
+      if (precisa) {
+        termoBox.style.display = 'block';
+        termoBox.setAttribute('aria-hidden','false');
+      } else {
+        termoBox.style.display = 'none';
+        termoBox.setAttribute('aria-hidden','true');
+        termoCheck.checked = false;
+        rubricaInput.value = '';
+      }
+    }
+
+    // ====== PDF ======
     async function generatePdfBlob() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
@@ -192,6 +245,10 @@
         const checked = document.querySelector(`input[name="q${i}"]:checked`);
         answers.push({ i, v: checked ? checked.value : '-' });
       }
+
+      const precisaTermo = answers.some(a => a.v === 'Sim');
+      const termoOk = precisaTermo ? !!termoCheck.checked : true;
+      const rubrica = precisaTermo ? (rubricaInput.value || '').trim() : '';
 
       const today = new Date();
       const pad2 = (n)=> String(n).padStart(2,'0');
@@ -219,31 +276,36 @@
         if (y > 280) { doc.addPage(); y = 20; }
       });
 
-      // Rodapé simples
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.setFontSize(9);
-      doc.text("Declaro que as informações acima são verdadeiras.", 14, y + 10);
+      // Termo
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.text("Termo de Responsabilidade:", 14, y + 6);
+      doc.setFontSize(10);
+      const termoStatus = precisaTermo ? (termoOk ? "Concordou" : "Não concordou") : "Não aplicável (todas respostas 'Não')";
+      doc.text(`Status: ${termoStatus}`, 14, y + 13);
+      if (precisaTermo) {
+        doc.text(`Rubrica: ${rubrica || '(não informada)'}`, 14, y + 20);
+      }
 
       const filename = `PARQ_${(nome || 'aluno').replace(/\s+/g,'_')}_${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}.pdf`;
       const blob = doc.output('blob');
 
-      // Pequeno resumo em texto para colar na mensagem do WhatsApp
+      // Pequeno resumo em texto para WhatsApp
       const textSummary = `PAR-Q - DUO Academia\nNome: ${nome || '(não informado)'}\nCPF: ${cpf || '(não informado)'}\n\nRespostas:\n` +
-        answers.map(a=>`Q${a.i}: ${a.v}`).join('\n');
+        answers.map(a=>`Q${a.i}: ${a.v}`).join('\n') +
+        `\n\nTermo: ${termoStatus}${precisaTermo ? `\nRubrica: ${rubrica || '(não informada)'}` : ''}`;
 
       return { blob, filename, textSummary };
     }
 
-    // Tenta compartilhar o PDF via Web Share (mobile), senão baixa e abre WhatsApp com texto
+    // Compartilhar / Baixar e abrir WhatsApp
     async function shareOrDownloadThenWhatsApp(unitKey) {
       const phone = PHONES[unitKey];
       if (!phone) return;
 
       const { blob, filename, textSummary } = await generatePdfBlob();
-
       const files = [new File([blob], filename, { type: 'application/pdf' })];
 
-      // Se o navegador suportar compartilhamento de arquivos (mobile)
       if (navigator.canShare && navigator.canShare({ files })) {
         try {
           await navigator.share({
@@ -251,17 +313,14 @@
             title: 'PAR-Q — DUO Academia',
             text: `Segue meu PAR-Q em PDF.`
           });
-          // Depois de compartilhar, também abre WhatsApp com a mensagem pronta (sem anexo automático)
           const msg = encodeURIComponent(`Enviei o meu PAR-Q em PDF.\n\n${textSummary}`);
           window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
           return;
         } catch (e) {
-          // se o usuário cancelar o share, continua para download + wa.me
           console.warn('Compartilhamento cancelado/indisponível, seguindo com download + WhatsApp.', e);
         }
       }
 
-      // Fallback (desktop ou sem suporte ao share): baixa o PDF e abre WhatsApp com texto
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = filename;
@@ -276,17 +335,16 @@
       window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     }
 
-    // Clique nas opções do modal
     async function handleSend(unitKey){
       hideSendModal();
       await shareOrDownloadThenWhatsApp(unitKey);
     }
 
-    // Clique no botão "Gerar PDF"
+    // ====== BOTÕES / EVENTOS ======
     document.getElementById('btnGerar').addEventListener('click', async () => {
       hideError();
 
-      // Validação obrigatória (7 perguntas)
+      // 1) Checa 7 obrigatórias
       const res = validateRequiredQuestions();
       if (!res.ok) {
         const faltam = res.missing.length;
@@ -295,9 +353,41 @@
         return;
       }
 
-      // Se passou na validação, abre o modal de envio
+      // 2) Se houver alguma “Sim”, termo + rubrica tornam-se obrigatórios
+      const precisa = anyAnswerYes();
+      if (precisa) {
+        if (!termoCheck.checked) {
+          showError(`Para prosseguir, marque a opção <strong>"Li e concordo com o termo"</strong>.`);
+          return;
+        }
+        if (!rubricaInput.value.trim()) {
+          showError(`Informe sua <strong>rubrica (iniciais)</strong> para prosseguir.`);
+          return;
+        }
+      }
+
+      // OK → abre seleção de envio
       showSendModal();
     });
+
+    // Atualiza visual do termo toda vez que marcar/desmarcar respostas
+    document.getElementById('parqForm').addEventListener('change', (ev) => {
+      if (ev.target && /^q[1-7]$/.test(ev.target.name)) {
+        updateTermoVisibility(false);
+      }
+    });
+
+    // Reset limpa tudo (inclui termo e erro)
+    document.getElementById('btnReset').addEventListener('click', () => {
+      setTimeout(() => {
+        hideError();
+        hideSendModal();
+        updateTermoVisibility(true);
+      }, 0);
+    });
+
+    // Estado inicial
+    updateTermoVisibility(true);
   </script>
 </body>
 </html>
