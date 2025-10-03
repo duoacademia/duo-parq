@@ -2,562 +2,451 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PAR-Q — DUO Academia</title>
-  <meta name="description" content="Questionário PAR-Q com validação, termo de concordância (rubrica desenhada), geração de PDF e envio por WhatsApp." />
-  <!-- jsPDF -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <!-- Signature Pad -->
-  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-  <!-- jsPDF AutoTable -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DUO Academia — PAR-Q</title>
+  <meta name="description" content="Questionário de Prontidão para Atividade Física (PAR-Q) com CPF obrigatório, assinatura por touch quando necessário e geração de PDF." />
   <style>
-    :root{
-      --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --fg:#e5e7eb;
-      --line:#1f2937; --brand:#3b82f6; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
-    }
+    :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --fg:#e5e7eb; --line:#1f2937; --brand:#3b82f6; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial;background:var(--bg);color:var(--fg)}
-    .container{max-width:960px;margin:0 auto;padding:24px}
-    .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
-    h1{margin:0 0 12px;font-size:22px}
-    .muted{color:var(--muted);font-size:14px;margin-bottom:18px}
-    fieldset{border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
-    legend{padding:0 6px;color:var(--muted);font-size:13px}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    .row label{display:flex;gap:8px;align-items:center;cursor:pointer}
-    .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
-    button{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
-    button.secondary{background:#334155}
-    button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    input[type="text"]{width:100%;background:#0b1324;border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:10px}
-    label.small{font-size:13px;color:var(--muted)}
-    .error-box{
-      display:none;background:#1e293b;border:1px solid var(--danger);
-      color:#fecaca;border-left:6px solid var(--danger);border-radius:10px;padding:12px 14px;margin:12px 0
+    html,body{height:100%; overflow-x:hidden;}
+    body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial; background:var(--bg); color:var(--fg);}
+    .wrap{max-width:980px;margin:0 auto;padding:24px}
+    header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:16px 0 24px;border-bottom:1px solid var(--line)}
+    h1{font-size:20px;margin:0;font-weight:700}
+    .badge{font-size:12px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}
+    @media (max-width: 900px){.grid{grid-template-columns:1fr;}}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{font-size:16px;margin:0 0 12px}
+    .row{display:grid;grid-template-columns:1fr 1fr; gap:12px}
+    .row-1{grid-template-columns:1fr}
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+    input,select,textarea{width:100%;background:#0b1220;border:1px solid #1c2536;color:var(--fg);border-radius:10px;padding:12px;outline:none}
+    input:focus,textarea:focus,select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+    /* Nome SEMPRE maiúsculo visualmente e no valor (JS garante o valor) */
+    #nome{text-transform:uppercase;}
+    .help{font-size:12px;color:var(--muted);margin-top:4px}
+    .buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .btn{appearance:none;border:1px solid #2a3448;background:#162136;color:#dbeafe;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+    .btn.primary{background:var(--brand); border-color:var(--brand); color:white}
+    .btn.success{background:var(--ok); border-color:var(--ok); color:#001a07}
+    .btn.danger{background:var(--danger); border-color:var(--danger); color:white}
+    .terms{border:1px dashed #334155;border-radius:12px;padding:12px; background:#0b1220; max-height:220px; overflow:auto;}
+    .checkbox{display:flex;gap:10px;align-items:center;margin:12px 0}
+    .checkbox input.ck{appearance:none; -webkit-appearance:none; width:22px; height:22px; border:2px solid #334155; border-radius:6px; background:#fff; display:inline-grid; place-content:center; cursor:pointer; outline:none}
+    .checkbox input.ck::before{content:""; width:14px; height:14px; transform:scale(0); transition:120ms transform ease-in-out; background:var(--brand); border-radius:4px}
+    .checkbox input.ck:checked::before{transform:scale(1)}
+    .checkbox span{font-size:14px; color:#e5e7eb; font-weight:600}
+    .checkbox input.ck:focus{box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+    .sig-wrap{background:#0b1220;border:1px solid #1c2536;border-radius:12px;padding:12px}
+    /* Canvas de assinatura MENOR e SEM BORDA */
+    canvas{width:100%;height:160px;background:#ffffff;border-radius:8px;border:0;touch-action:none}
+    .preview{position:sticky; top:24px; overflow-x:auto;} /* rola só a prévia se precisar */
+    .muted{color:var(--muted)}
+    .hr{height:1px;background:#1f2937;border:0;margin:12px 0}
+    footer{margin-top:20px;font-size:12px;color:var(--muted);text-align:center}
+
+    /* Printable area */
+    .sheet{background:white;color:#111; width:794px; min-height:1123px; padding:28mm 20mm; border:1px solid #ddd; border-radius:6px; box-shadow:0 4px 30px rgba(0,0,0,.15);
+      word-spacing: .06em; letter-spacing: .01em; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; font-kerning: normal; hyphens: none; word-break: normal; overflow-wrap: anywhere;
     }
-    /* Termo */
-    .termo{
-      display:none;border:1px dashed var(--warn);border-radius:10px;padding:12px 14px;background:#0b1324;margin-top:12px
+    .sheet h3, .sheet th, .sheet strong, .sheet .title-tight { word-spacing: .08em; letter-spacing: .02em; }
+    .sheet h3{margin:0 0 8px}
+    .sheet small{color:#555}
+    .sheet .section{margin-top:14px}
+    .sheet table{width:100%; border-collapse:collapse; font-size:13px}
+    .sheet th,.sheet td{border:1px solid #ccc; padding:10px 12px; text-align:left; vertical-align:middle}
+    #pv_questions th:nth-child(2), #pv_questions th:nth-child(3),
+    #pv_questions td:nth-child(2), #pv_questions td:nth-child(3){ width:10.5%; text-align:center; }
+    #pv_questions td.sn{font-size:18px; font-weight:800; letter-spacing:.05em}
+    /* Assinatura na folha: MENOR e SEM CONTORNO */
+    .sheet .sign-img{width:100%; height:120px; max-height:120px; border:0; border-radius:0; object-fit:contain; display:block; margin:0 auto}
+    .sheet .sign-area{display:flex; gap:16px; align-items:flex-end; margin-top:12px}
+    .sheet .sign-box{flex:1}
+    .sheet .line{height:1px;background:#ccc;margin:6px 0}
+    .sheet .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+    .sheet .brand{display:flex; align-items:flex-start; gap:10px;}
+    .sheet .brand img.logo{height:34px; width:auto; display:block;}
+    .sheet .brand small{
+      font-size:8px;
+      line-height:1.2;
+      margin-top:2px;
+      display:block;
     }
-    .termo h3{margin:0 0 6px;font-size:16px;color:#fde68a}
-    .termo p{margin:6px 0 12px;color:#eab308}
-    .sig-wrap{max-width:420px}
-    .sig-canvas{
-      width:100%;height:160px;background:#fff;border:1px solid #cbd5e1;border-radius:10px;touch-action:none
+    .sheet .brand h3{ margin:0 0 4px; }
+
+    /* Radios segmentados */
+    .opts{display:inline-flex; gap:10px; align-items:center; flex-wrap:nowrap}
+    .seg{display:inline-flex; align-items:center; border-radius:999px; overflow:hidden}
+    .seg input{position:absolute; opacity:0; pointer-events:none}
+    .seg span{display:inline-block; padding:8px 16px; border:1px solid #334155; border-radius:999px; background:#0b1220; color:#e5e7eb; font-weight:700; line-height:1; user-select:none; cursor:pointer;}
+    .seg input:focus + span{box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+    .seg input:checked + span{background:var(--brand); color:white; border-color:var(--brand)}
+    .q{display:grid; grid-template-columns: 1fr auto; align-items:center; gap:14px; padding:12px 0; border-bottom:1px dashed #2a3346}
+    .q strong{font-weight:700}
+    @media (max-width:520px){
+      .q{grid-template-columns: 1fr}
+      .opts{gap:8px}
     }
-    .sig-actions{display:flex;gap:10px;margin-top:8px}
-    /* Modal ENVIAR PARA */
-    .send-modal{
-      display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
-      align-items:center;justify-content:center;padding:18px;z-index:50
+    /* Esconde a linha da data (campo continua existindo e é preenchido pelo JS) */
+    #row_data{display:none}
+
+    /* ===== Mobile tweaks ===== */
+    @media (max-width:720px){
+      .row{ grid-template-columns: 1fr; }   /* Identificação empilhada */
+      .q{ grid-template-columns: 1fr; }    /* Pergunta em cima, opções embaixo */
+      .opts{ gap:8px; flex-wrap: wrap; }
+      .card{ padding:16px; }
+      .wrap{ padding:16px; }
     }
-    .send-card{
-      width:100%;max-width:460px;background:var(--panel);border:1px solid var(--line);
-      border-radius:14px;padding:18px
-    }
-    .send-card h3{margin:0 0 8px}
-    .send-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
-    .send-option{width:100%;text-align:center;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1324}
-    .close-x{float:right;background:transparent;border:0;color:var(--muted);font-size:18px;cursor:pointer}
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="panel">
-      <h1>PAR-Q — DUO Academia</h1>
-      <p class="muted">Responda às 7 perguntas obrigatórias. Se marcar “Sim” em qualquer uma, leia e aceite o termo e desenhe sua rubrica. Depois, gere o PDF e escolha a unidade para envio.</p>
-
-      <!-- Identificação -->
-      <div class="row" style="gap:10px;margin-bottom:8px">
-        <div style="flex:1 1 220px">
-          <label class="small">Nome completo</label>
-          <input type="text" id="nome" placeholder="Seu nome" />
-        </div>
-        <div style="flex:1 1 160px">
-          <label class="small">CPF</label>
-          <input type="text" id="cpf" placeholder="000.000.000-00" />
-        </div>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>DUO Academia · PAR-Q (Questionário de Prontidão Para Atividade Física)</h1>
+        <div class="badge">Preencha o PAR-Q. Se houver alguma resposta “SIM”, aceite o termo e assine; depois gere o PDF.</div>
       </div>
+      <div class="badge">v1.2 (PAR-Q)</div>
+    </header>
 
-      <!-- Erros -->
-      <div id="errorBox" class="error-box"></div>
+    <div class="grid">
+      <div class="card">
+        <h2>1) Identificação</h2>
+        <div class="row">
+          <div>
+            <label for="nome">Nome completo</label>
+            <input id="nome" placeholder="Ex.: João da Silva" />
+          </div>
+          <div>
+            <label for="cpf">CPF</label>
+            <input id="cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" />
+            <div class="help">Obrigatório</div>
+          </div>
+        </div>
 
-      <form id="parqForm">
-        <fieldset data-required>
-          <legend>1) Alguma vez um médico já lhe disse que você possui um problema no coração?</legend>
-          <div class="row">
-            <label><input type="radio" name="q1" value="Sim" />Sim</label>
-            <label><input type="radio" name="q1" value="Não" />Não</label>
+        <!-- LINHA DA DATA (oculta por CSS) -->
+        <div id="row_data" class="row">
+          <div>
+            <label for="data_assinatura">Data</label>
+            <input id="data_assinatura" type="date"/>
           </div>
-        </fieldset>
-        <fieldset data-required>
-          <legend>2) Você sente dor no peito quando pratica atividade física?</legend>
-          <div class="row">
-            <label><input type="radio" name="q2" value="Sim" />Sim</label>
-            <label><input type="radio" name="q2" value="Não" />Não</label>
-          </div>
-        </fieldset>
-        <fieldset data-required>
-          <legend>3) No último mês, você sentiu dor no peito quando não estava praticando atividade física?</legend>
-          <div class="row">
-            <label><input type="radio" name="q3" value="Sim" />Sim</label>
-            <label><input type="radio" name="q3" value="Não" />Não</label>
-          </div>
-        </fieldset>
-        <fieldset data-required>
-          <legend>4) Você perde o equilíbrio por causa de tontura ou já perdeu a consciência?</legend>
-          <div class="row">
-            <label><input type="radio" name="q4" value="Sim" />Sim</label>
-            <label><input type="radio" name="q4" value="Não" />Não</label>
-          </div>
-        </fieldset>
-        <fieldset data-required>
-          <legend>5) Você possui algum problema ósseo ou articular que poderia piorar com a atividade física?</legend>
-          <div class="row">
-            <label><input type="radio" name="q5" value="Sim" />Sim</label>
-            <label><input type="radio" name="q5" value="Não" />Não</label>
-          </div>
-        </fieldset>
-        <fieldset data-required>
-          <legend>6) Seu médico está prescrevendo atualmente medicamentos para pressão arterial ou coração?</legend>
-          <div class="row">
-            <label><input type="radio" name="q6" value="Sim" />Sim</label>
-            <label><input type="radio" name="q6" value="Não" />Não</label>
-          </div>
-        </fieldset>
-        <fieldset data-required>
-          <legend>7) Você sabe de alguma outra razão pela qual não deve praticar atividade física?</legend>
-          <div class="row">
-            <label><input type="radio" name="q7" value="Sim" />Sim</label>
-            <label><input type="radio" name="q7" value="Não" />Não</label>
-          </div>
-        </fieldset>
+        </div>
 
-        <!-- TERMO + RUBRICA (Canvas) -->
-        <div id="termoBox" class="termo" aria-hidden="true">
-          <h3>Termo de Responsabilidade</h3>
-          <p>
-            Você assinalou pelo menos uma resposta “Sim”. Confirmo que estou ciente de que devo buscar avaliação médica
-            antes de iniciar ou prosseguir atividades físicas. Concordo em seguir as orientações profissionais da DUO Academia.
-          </p>
-          <label style="display:block;margin-bottom:8px">
-            <input type="checkbox" id="termo_check" /> Li e concordo com o termo acima.
+        <h2 style="margin-top:18px">2) PAR-Q (responda S/N)</h2>
+        <div class="terms" style="margin-bottom:8px">
+          <div style="font-size:13px; line-height:1.45">
+            Em conformidade com a <strong>Lei n.º 15.619/2015</strong>, este questionário identifica a necessidade de avaliação médica antes do início da atividade física. Caso responda “SIM” a uma ou mais perguntas, <strong>converse com seu médico</strong> antes de aumentar seu nível atual de atividade física.
+          </div>
+        </div>
+
+        <!-- Perguntas -->
+        <div class="q"><strong>1. Tem algum problema cardíaco de qualquer tipo?</strong>
+          <div class="opts">
+            <label class="seg"><input type="radio" name="q1" value="S"><span>Sim</span></label>
+            <label class="seg"><input type="radio" name="q1" value="N"><span>Não</span></label>
+          </div>
+        </div>
+        <div class="q"><strong>2. Sente dores no peito quando pratica exercícios?</strong>
+          <div class="opts">
+            <label class="seg"><input type="radio" name="q2" value="S"><span>Sim</span></label>
+            <label class="seg"><input type="radio" name="q2" value="N"><span>Não</span></label>
+          </div>
+        </div>
+        <div class="q"><strong>3. Recentemente sentiu dores no peito durante algum exercício físico?</strong>
+          <div class="opts">
+            <label class="seg"><input type="radio" name="q3" value="S"><span>Sim</span></label>
+            <label class="seg"><input type="radio" name="q3" value="N"><span>Não</span></label>
+          </div>
+        </div>
+        <div class="q"><strong>4. Apresenta desequilíbrio ou tontura levando ao desmaio?</strong>
+          <div class="opts">
+            <label class="seg"><input type="radio" name="q4" value="S"><span>Sim</span></label>
+            <label class="seg"><input type="radio" name="q4" value="N"><span>Não</span></label>
+          </div>
+        </div>
+        <div class="q"><strong>5. Tem algum problema osteomioarticular que possa piorar com o exercício?</strong>
+          <div class="opts">
+            <label class="seg"><input type="radio" name="q5" value="S"><span>Sim</span></label>
+            <label class="seg"><input type="radio" name="q5" value="N"><span>Não</span></label>
+          </div>
+        </div>
+        <div class="q"><strong>6. Usa algum medicamento para pressão arterial ou coração?</strong>
+          <div class="opts">
+            <label class="seg"><input type="radio" name="q6" value="S"><span>Sim</span></label>
+            <label class="seg"><input type="radio" name="q6" value="N"><span>Não</span></label>
+          </div>
+        </div>
+        <div class="q"><strong>7. Sabe de alguma razão pela qual não deve praticar exercícios?</strong>
+          <div class="opts">
+            <label class="seg"><input type="radio" name="q7" value="S"><span>Sim</span></label>
+            <label class="seg"><input type="radio" name="q7" value="N"><span>Não</span></label>
+          </div>
+        </div>
+
+        <div id="anexo2_card" class="card" style="margin-top:14px; display:none; background:#0b1220">
+          <h2>Anexo II — Termo de responsabilidade</h2>
+          <div style="font-size:13px; line-height:1.5; margin-bottom:8px">
+            Estou ciente de que é recomendável conversar com um médico antes de aumentar meu nível atual de atividade física, por ter respondido “SIM” a uma ou mais perguntas do PAR-Q. Assumo plena responsabilidade por qualquer atividade física praticada sem o atendimento a essa recomendação.
+          </div>
+          <label class="checkbox">
+            <input id="aceite" class="ck" type="checkbox">
+            <span>Declaro que li e concordo com o termo acima.</span>
           </label>
           <div class="sig-wrap">
-            <label class="small">Rubrica desenhada (obrigatória quando houver "Sim")</label>
-            <canvas id="canvasRubrica" class="sig-canvas"></canvas>
-            <div class="sig-actions">
-              <button type="button" class="ghost" id="btnLimparRubrica">Limpar rubrica</button>
+            <label>Assine no quadro abaixo</label>
+            <canvas id="signaturePad" width="900" height="350" aria-label="Área para assinatura com o dedo ou mouse"></canvas>
+            <div class="buttons">
+              <button class="btn" id="btnLimpar">Limpar</button>
             </div>
           </div>
         </div>
 
-        <div class="actions">
-          <button type="button" id="btnGerar">Gerar PDF</button>
-          <button type="reset" class="secondary" id="btnReset">Limpar</button>
+        <div class="buttons">
+          <button class="btn success" id="btnPDF">Gerar PDF</button>
+          <button class="btn danger" id="btnReset">Resetar formulário</button>
         </div>
-      </form>
+      </div>
+
+      <div class="card preview">
+        <h2>Pré-visualização do documento (PDF)</h2>
+        <div class="help">A prévia atualiza automaticamente conforme você preenche.</div>
+        <div id="printArea" class="sheet" aria-label="Área imprimível">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div class="brand">
+              <img id="sheet_logo" class="logo" alt="Logo DUO" crossorigin="anonymous" />
+              <div>
+                <h3>DUO ACADEMIA</h3>
+                <small>Av. Simoa Gomes, 726 – Heliópolis · R. Dom José, 187 – Santo Antônio<br>
+                (87) 9.9666-0021 | (87) 9.9934-1230 · coordenacaoduoacademia@gmail.com<br></small>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:12px;color:#444">Código: <span id="doc_id"></span></div>
+              <div style="font-size:12px;color:#444">Data: <span id="doc_data"></span></div>
+            </div>
+          </div>
+          <div class="line"></div>
+
+          <div class="section">
+            <table>
+              <tr><th colspan="2">ANEXO I — QUESTIONÁRIO DE PRONTIDÃO PARA ATIVIDADE FÍSICA (PAR-Q)</th></tr>
+              <tr><td style="width:26%">Nome completo</td><td id="pv_nome"></td></tr>
+              <tr><td>CPF</td><td id="pv_cpf"></td></tr>
+              <tr><td colspan="2" style="font-size:12.5px">
+                Em conformidade com a Lei n.º 15.619/2015. Caso você responda "sim" a uma ou mais perguntas, converse com seu médico antes de aumentar seu nível atual de atividade física.
+              </td></tr>
+            </table>
+          </div>
+
+          <div class="section">
+            <table id="pv_questions">
+              <tr><th style="width:79%">Pergunta</th><th>S</th><th>N</th></tr>
+              <tr><td>1. Apresenta problema cardíaco de qualquer tipo</td><td id="p1s" class="sn"></td><td id="p1n" class="sn"></td></tr>
+              <tr><td>2. Sente dores no peito quando pratica exercícios</td><td id="p2s" class="sn"></td><td id="p2n" class="sn"></td></tr>
+              <tr><td>3. Sentiu dores no peito recentes durante exercício</td><td id="p3s" class="sn"></td><td id="p3n" class="sn"></td></tr>
+              <tr><td>4. Apresenta desequilíbrio/tontura levando ao desmaio</td><td id="p4s" class="sn"></td><td id="p4n" class="sn"></td></tr>
+              <tr><td>5. Apresenta problema osteomioarticular que pode piorar com exercício</td><td id="p5s" class="sn"></td><td id="p5n" class="sn"></td></tr>
+              <tr><td>6. Usa remédio para pressão/coração</td><td id="p6s" class="sn"></td><td id="p6n" class="sn"></td></tr>
+              <tr><td>7. Conhece alguma razão para não praticar exercícios</td><td id="p7s" class="sn"></td><td id="p7n" class="sn"></td></tr>
+            </table>
+          </div>
+
+          <div id="anexo2_sheet" class="section" style="display:none">
+            <table>
+              <tr><th colspan="1">ANEXO II — TERMO DE RESPONSABILIDADE (assinar somente se houve “SIM”)</th></tr>
+              <tr><td style="font-size:13px">
+                Estou ciente de que é recomendável conversar com um médico antes de aumentar meu nível atual de atividade física, por ter respondido “SIM” a uma ou mais perguntas do PAR-Q. Assumo plena responsabilidade por qualquer atividade física praticada sem o atendimento a essa recomendação.
+              </td></tr>
+              <tr>
+                <td>
+                  <div class="sign-area">
+                    <div class="sign-box">
+                      <img id="pv_assinatura" class="sign-img" alt="Assinatura" />
+                      <div class="line"></div>
+                      <div style="font-size:12px;color:#555">Assinatura ou Rúbrica do Contratante</div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <footer>
+          Dica: você também pode usar <strong>Imprimir &gt; Salvar como PDF</strong> se preferir.
+        </footer>
+      </div>
     </div>
   </div>
 
-  <!-- Modal ENVIAR PARA -->
-  <div id="sendModal" class="send-modal" aria-hidden="true">
-    <div class="send-card">
-      <button class="close-x" aria-label="Fechar" onclick="hideSendModal()">✕</button>
-      <h3>ENVIAR PARA:</h3>
-      <div class="send-grid">
-        <button class="send-option" onclick="handleSend('centro')">Unidade Centro</button>
-        <button class="send-option" onclick="handleSend('heliopolis')">Unidade Heliópolis</button>
-      </div>
-      <p class="muted" style="margin-top:10px">
-        No desktop: o PDF baixa e o WhatsApp Web abre com mensagem pronta; anexe o arquivo baixado.
-        Em muitos celulares, o compartilhamento envia o PDF direto.
-      </p>
-    </div>
-  </div>
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <script>
-    // Telefones
-    const PHONES = { centro: "5587999341230", heliopolis: "5587996660021" };
-
-    // ====== UI helpers ======
-    const errorBox = document.getElementById('errorBox');
-    function showError(msg){ errorBox.innerHTML = msg; errorBox.style.display='block'; errorBox.scrollIntoView({behavior:'smooth', block:'center'}); }
-    function hideError(){ errorBox.style.display='none'; }
-    function showSendModal(){ document.getElementById('sendModal').style.display='flex'; }
-    function hideSendModal(){ document.getElementById('sendModal').style.display='none'; }
-
-    // ====== Perguntas ======
-    function validateRequiredQuestions() {
-      const sets = Array.from(document.querySelectorAll('fieldset[data-required]'));
-      const unanswered = [];
-      sets.forEach((fs, idx) => {
-        const name = 'q' + (idx + 1);
-        const checked = fs.querySelector('input[name=\"'+name+'\"]:checked');
-        if (!checked) unanswered.push(idx + 1);
-      });
-      return { ok: unanswered.length === 0, missing: unanswered };
+    const $ = (s) => document.querySelector(s);
+    const onlyDigits = (v) => (v||'').replace(/\D+/g,'');
+    const maskCPF = (v) => {
+      v = onlyDigits(v).slice(0,11);
+      return v.replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d)/, '$1.$2')
+              .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    };
+    function isValidCPF(cpf){
+      cpf = onlyDigits(cpf);
+      if (cpf.length !== 11) return false;
+      if (/^(\d)\1{10}$/.test(cpf)) return false;
+      let sum = 0, rest;
+      for (let i=1;i<=9;i++) sum += parseInt(cpf.substring(i-1,i)) * (11 - i);
+      rest = (sum * 10) % 11; if (rest === 10 || rest === 11) rest = 0; if (rest !== parseInt(cpf.substring(9,10))) return false;
+      sum = 0; for (let i=1;i<=10;i++) sum += parseInt(cpf.substring(i-1,i)) * (12 - i);
+      rest = (sum * 10) % 11; if (rest === 10 || rest === 11) rest = 0; return rest === parseInt(cpf.substring(10,11));
     }
-    function anyAnswerYes(){
-      for(let i=1;i<=7;i++){
-        const el = document.querySelector('input[name=\"q'+i+'\"]:checked');
-        if (el && el.value === 'Sim') return true;
+
+    // remove acentos/espacos e deixa MAIÚSCULO para o nome do arquivo
+    function normalizeName(s){
+      const noAccents = s.normalize('NFD').replace(/\p{Diacritic}/gu,'');
+      return noAccents.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+    }
+
+    // logo
+    const DEFAULT_LOGO = 'logo.png';
+    const urlParamLogo = new URLSearchParams(location.search).get('logo');
+    const logoSrc = urlParamLogo || DEFAULT_LOGO;
+    (function setLogo(){ const img=$('#sheet_logo'); if(img){img.src=logoSrc; img.setAttribute('crossorigin','anonymous');} })();
+
+    // data de hoje (fixa e oculta o input)
+    function setTodayBR(){
+      try{
+        const parts = new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Fortaleza', day:'2-digit', month:'2-digit', year:'numeric'}).formatToParts(new Date());
+        const dd = parts.find(p=>p.type==='day').value;
+        const mm = parts.find(p=>p.type==='month').value;
+        const yyyy = parts.find(p=>p.type==='year').value;
+        const iso = `${yyyy}-${mm}-${dd}`;
+        $('#data_assinatura').value = iso;      // existe, mas está oculto
+        $('#doc_data').textContent = `${dd}/${mm}/${yyyy}`;
+      }catch(e){
+        const t=new Date(), yyyy=t.getFullYear(), mm=String(t.getMonth()+1).padStart(2,'0'), dd=String(t.getDate()).padStart(2,'0');
+        const iso=`${yyyy}-${mm}-${dd}`; $('#data_assinatura').value=iso; $('#doc_data').textContent=`${dd}/${mm}/${yyyy}`;
       }
-      return false;
     }
 
-    // ====== Termo + SignaturePad ======
-    const termoBox = document.getElementById('termoBox');
-    const termoCheck = document.getElementById('termo_check');
-    const canvas = document.getElementById('canvasRubrica');
-    let signaturePad = null;
-
-    function resizeCanvas() {
-      if (!canvas) return;
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-      // guarda tamanho CSS
-      const w = canvas.offsetWidth;
-      const h = canvas.offsetHeight;
-      canvas.width = w * ratio;
-      canvas.height = h * ratio;
-      const ctx = canvas.getContext('2d');
-      ctx.scale(ratio, ratio);
-      if (signaturePad) signaturePad.clear();
-    }
-
+    // assinatura
+    let signaturePad, canvas;
     function ensureSignaturePad(){
-      if (!signaturePad) {
-        signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,1)', penColor: 'rgb(0,0,0)' });
-        document.getElementById('btnLimparRubrica').addEventListener('click', () => signaturePad.clear());
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-      }
-    }
-
-    function updateTermoVisibility(reset=false){
-      if (reset){
-        termoBox.style.display='none'; termoBox.setAttribute('aria-hidden','true');
-        if (termoCheck) termoCheck.checked = false;
-        if (signaturePad) signaturePad.clear();
-        return;
-      }
-      const precisa = anyAnswerYes();
-      if (precisa){
-        termoBox.style.display='block'; termoBox.setAttribute('aria-hidden','false');
-        ensureSignaturePad();
-      }else{
-        termoBox.style.display='none'; termoBox.setAttribute('aria-hidden','true');
-        if (termoCheck) termoCheck.checked = false;
-        if (signaturePad) signaturePad.clear();
-      }
-    }
-
-    // ====== PDF ======
-        async function generatePdfBlob() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-
-      // Helpers
-      const pad2 = (n)=> String(n).padStart(2,'0');
-      const now = new Date();
-      const dataStr = `${pad2(now.getDate())}/${pad2(now.getMonth()+1)}/${now.getFullYear()}`;
-      const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
-      const code = `${now.getFullYear()}${pad2(now.getMonth()+1)}${pad2(now.getDate())}${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
-
-      const nome = (document.getElementById('nome').value || '').trim();
-      const cpf  = (document.getElementById('cpf').value  || '').trim();
-
-      const answers = [];
-      for (let i=1;i<=7;i++){
-        const q = document.querySelector('input[name="q'+i+'"]:checked');
-        answers.push({ i, v: q ? q.value : '-' });
-      }
-      const precisaTermo = answers.some(a => a.v === 'Sim');
-      const termoOk = precisaTermo ? !!(document.getElementById('termo_check') && document.getElementById('termo_check').checked) : true;
-
-      // Load logo -> dataURL
-      async function loadImageDataURL(url) {
-        const res = await fetch(url, {mode:'cors'});
-        const blob = await res.blob();
-        return await new Promise((resolve)=>{
-          const reader = new FileReader();
-          reader.onload = ()=> resolve(reader.result);
-          reader.readAsDataURL(blob);
-        });
-      }
-      let logoData = null;
-      try {
-        logoData = await loadImageDataURL('https://i.ibb.co/fVtJWfV3/logoduo.png');
-      } catch(e) { console.warn('Falha ao carregar logo', e); }
-
-      // --- Header ---
-      const left = 14, right = 196; // A4 width 210mm, margins 14mm
-      let y = 12;
-
-      if (logoData){
-        doc.addImage(logoData, 'PNG', left, y, 20, 20);
-      }
-      doc.setFontSize(10);
-      doc.setTextColor(0,0,0);
-      doc.text('DUO ACADEMIA', left+24, y+4);
-      doc.setFontSize(8);
-      doc.setTextColor(80);
-      doc.text('Av. Simão Gomes, 726 • Heliópolis • R. Dom José, 187 • Santo Antônio', left+24, y+9);
-      doc.text('(87) 9.9666-0021 | (87) 9.9934-1230 • coordenacaoduoacademia@gmail.com', left+24, y+14);
-
-      // Code + date
-      doc.setFontSize(9);
-      doc.setTextColor(0);
-      doc.text(`Código: ${code}`, right-60, y+4);
-      doc.text(`Data: ${dataStr}`, right-60, y+10);
-      y += 22;
-
-      // Title band
-      doc.setDrawColor(200);
-      doc.setFillColor(245);
-      doc.roundedRect(left, y, right-left, 10, 1.5, 1.5, 'F');
-      doc.setFontSize(11);
-      doc.setTextColor(0);
-      doc.text('ANEXO I — QUESTIONÁRIO DE PRONTIDÃO PARA ATIVIDADE FÍSICA (PAR-Q)', left+2, y+6);
-      y += 14;
-
-      // Identification table
-      const lawText = 'Em conformidade com a Lei n.º 15.619/2015. Caso você responda "sim" a uma ou mais perguntas, converse com seu médico antes de aumentar seu nível atual de atividade física.';
-
-      doc.setFontSize(10);
-      doc.setDrawColor(210);
-      doc.setFillColor(255);
-      // Name row
-      doc.rect(left, y, right-left, 8);
-      doc.setFont(undefined, 'bold'); doc.text('Nome completo', left+2, y+5);
-      doc.setFont(undefined, 'normal'); doc.text(nome || '(não informado)', left+45, y+5);
-      y += 8;
-      // CPF row
-      doc.rect(left, y, right-left, 8);
-      doc.setFont(undefined, 'bold'); doc.text('CPF', left+2, y+5);
-      doc.setFont(undefined, 'normal'); doc.text(cpf || '(não informado)', left+45, y+5);
-      y += 10;
-
-      // Law notice box
-      doc.setFontSize(9);
-      doc.setTextColor(60);
-      const splitLaw = doc.splitTextToSize(lawText, right-left-4);
-      doc.rect(left, y, right-left, 12 + (splitLaw.length>2 ? (splitLaw.length-2)*4 : 0));
-      doc.text(splitLaw, left+2, y+5);
-      y += 12 + (splitLaw.length>2 ? (splitLaw.length-2)*4 : 0) + 4;
-
-      // Questions table with autoTable
-      const body = answers.map(({i,v})=>{
-        return [
-          `${i}. ${[
-            'Apresenta problema cardíaco de qualquer tipo',
-            'Sente dores no peito quando pratica exercícios',
-            'Sentiu dores no peito recentes durante exercício',
-            'Apresenta desequilíbrio/tontura levando ao desmaio',
-            'Apresenta problema osteomioarticular que pode piorar com exercício',
-            'Usa remédio para pressão/coração',
-            'Conhece alguma razão para não praticar exercícios'
-          ][i-1]}`,
-          v === 'Sim' ? 'X' : '',
-          v === 'Não' ? 'X' : ''
-        ];
+      if (signaturePad) return;
+      canvas = document.getElementById('signaturePad');
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
+      signaturePad = new SignaturePad(canvas, { backgroundColor:'#fff', penColor:'#111827', minWidth:0.7, maxWidth:2.0, throttle:0 });
+      canvas.addEventListener('mouseup', renderPreview);
+      canvas.addEventListener('touchend', renderPreview);
+      $('#btnLimpar').addEventListener('click', (e)=>{ e.preventDefault(); signaturePad.clear(); renderPreview(); });
+      window.addEventListener('resize', ()=>{
+        const data = signaturePad.toData();
+        const rect = canvas.getBoundingClientRect();
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = rect.width * ratio; canvas.height = rect.height * ratio;
+        const ctx = canvas.getContext('2d'); ctx.scale(ratio, ratio);
+        signaturePad.clear(); signaturePad.fromData(data);
       });
-
-      doc.setFontSize(10);
-      doc.setTextColor(0);
-
-      // load autotable if available
-      if (!doc.autoTable) {
-        // fallback manual grid if autotable not loaded
-        const colW = [right-left-20, 10, 10];
-        // header
-        doc.setFillColor(245);
-        doc.rect(left, y, colW[0]+colW[1]+colW[2], 8, 'F');
-        doc.text('Pergunta', left+2, y+5);
-        doc.text('S', left+colW[0]+colW[1]/2+left, y+5, {align:'center'});
-        doc.text('N', left+colW[0]+colW[1]+colW[2]/2+left, y+5, {align:'center'});
-        y += 8;
-        body.forEach(row=>{
-          const h = 10;
-          doc.rect(left, y, colW[0], h);
-          doc.rect(left+colW[0], y, colW[1], h);
-          doc.rect(left+colW[0]+colW[1], y, colW[2], h);
-          const txt = doc.splitTextToSize(row[0], colW[0]-4);
-          doc.text(txt, left+2, y+5);
-          if (row[1]) doc.text('X', left+colW[0]+colW[1]/2, y+6, {align:'center'});
-          if (row[2]) doc.text('X', left+colW[0]+colW[1]+colW[2]/2, y+6, {align:'center'});
-          y += max(10, (txt.length*4)+4);
-        });
-      } else {
-        doc.autoTable({
-          startY: y,
-          head: [['Pergunta', 'S', 'N']],
-          body: body,
-          theme: 'grid',
-          styles: { fontSize: 9, cellPadding: 3, lineColor: [210,210,210], lineWidth: 0.4 },
-          headStyles: { fillColor: [245,245,245], textColor: [0,0,0], fontStyle: 'bold', halign: 'center' },
-          columnStyles: {
-            0: { cellWidth: right-left-22, halign: 'left' },
-            1: { cellWidth: 11, halign: 'center' },
-            2: { cellWidth: 11, halign: 'center' }
-          },
-          didDrawPage: (data) => {}
-        });
-        y = doc.lastAutoTable.finalY + 6;
-      }
-
-      // Termo + Rubrica
-      doc.setFontSize(10);
-      if (precisaTermo){
-        doc.setDrawColor(210);
-        doc.roundedRect(left, y, right-left, 28, 1.5, 1.5);
-        doc.text('Termo de Responsabilidade:', left+2, y+6);
-        const termoTxt = 'Declaro que estou ciente de que devo buscar avaliação médica antes de iniciar ou prosseguir atividades físicas e que seguirei as orientações profissionais da DUO Academia.';
-        doc.setFontSize(9);
-        doc.setTextColor(60);
-        doc.text(doc.splitTextToSize(termoTxt, right-left-4), left+2, y+11);
-        doc.setTextColor(0);
-        // assinatura desenhada (rubrica)
-        if (signaturePad && !signaturePad.isEmpty()){
-          const imgData = signaturePad.toDataURL('image/png');
-          // box label
-          doc.setFontSize(9);
-          doc.text('Rubrica do aluno (iniciais):', left+2, y+23);
-          doc.setDrawColor(200);
-          doc.rect(left+45, y+15, 40, 12); // caixa
-          doc.addImage(imgData, 'PNG', left+46, y+16, 38, 10);
-        } else {
-          doc.setFontSize(9);
-          doc.text('Rubrica do aluno (iniciais): _________________________________', left+2, y+23);
-        }
-      }
-
-      // output
-      const filename = `PARQ_${(nome || 'aluno').replace(/\s+/g,'_')}_${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}.pdf`;
-      const blob = doc.output('blob');
-
-      const textSummary = `PAR-Q - DUO Academia\nNome: ${nome || '(não informado)'}\nCPF: ${cpf || '(não informado)'}\n\nRespostas:\n` +
-        answers.map(a=>`Q${a.i}: ${a.v}`).join('\n') +
-        `\n\nTermo: ${precisaTermo ? (termoOk ? 'Concordou' : 'Não concordou') : 'Não aplicável'}`;
-
-      return { blob, filename, textSummary };
     }
 
-      const precisaTermo = answers.some(a => a.v === 'Sim');
-      const termoOk = precisaTermo ? !!(termoCheck && termoCheck.checked) : true;
-
-      const now = new Date();
-      const pad2 = (n)=> String(n).padStart(2,'0');
-      const dataStr = `${pad2(now.getDate())}/${pad2(now.getMonth()+1)}/${now.getFullYear()} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
-
-      // Cabeçalho
-      doc.setFontSize(14);
-      doc.text("PAR-Q — DUO Academia", 14, 16);
-      doc.setFontSize(10);
-      doc.text(`Data/Hora: ${dataStr}`, 14, 24);
-
-      // Identificação
-      doc.setFontSize(11);
-      doc.text(`Nome: ${nome || '(não informado)'}`, 14, 34);
-      doc.text(`CPF: ${cpf || '(não informado)'}`, 14, 41);
-
-      // Respostas
-      let y = 53;
-      doc.setFontSize(12);
-      doc.text("Respostas:", 14, 48);
-      doc.setFontSize(11);
-      answers.forEach(({i,v})=>{ doc.text(`${i}) ${v}`, 14, y); y += 7; if (y>280){ doc.addPage(); y=20; } });
-
-      // Termo
-      if (y > 230) { doc.addPage(); y = 20; }
-      doc.setFontSize(12);
-      doc.text("Termo de Responsabilidade:", 14, y + 6);
-      doc.setFontSize(10);
-      const termoStatus = precisaTermo ? (termoOk ? "Concordou" : "Não concordou") : "Não aplicável (todas respostas 'Não')";
-      doc.text(`Status: ${termoStatus}`, 14, y + 13);
-      y += 22;
-
-      // Rubrica desenhada
-      if (precisaTermo && signaturePad && !signaturePad.isEmpty()){
-        try{
-          const imgData = signaturePad.toDataURL('image/png');
-          const imgW = 80, imgH = 40;
-          if (y + imgH + 10 > 290){ doc.addPage(); y = 20; }
-          doc.setFontSize(10);
-          doc.text("Rubrica desenhada:", 14, y);
-          doc.addImage(imgData, 'PNG', 14, y + 4, imgW, imgH);
-          y += imgH + 12;
-        }catch(e){ console.warn('Falha ao inserir rubrica no PDF', e); }
+    function answers(){
+      const a = {};
+      for(let i=1;i<=7;i++){
+        const v = document.querySelector(`input[name="q${i}"]:checked`);
+        a[`q${i}`] = v ? v.value : '';
       }
-
-      const filename = `PARQ_${(nome || 'aluno').replace(/\s+/g,'_')}_${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}.pdf`;
-      const blob = doc.output('blob');
-
-      const textSummary = `PAR-Q - DUO Academia\nNome: ${nome || '(não informado)'}\nCPF: ${cpf || '(não informado)'}\n\nRespostas:\n` +
-        answers.map(a=>`Q${a.i}: ${a.v}`).join('\n') +
-        `\n\nTermo: ${termoStatus}${(precisaTermo && signaturePad && !signaturePad.isEmpty()) ? `\nRubrica: (imagem anexada no PDF)` : ''}`;
-
-      return { blob, filename, textSummary };
+      return a;
     }
+    function anyYes(a){ return Object.values(a).some(v => v==='S'); }
 
-    async function shareOrDownloadThenWhatsApp(unitKey) {
-      const phone = PHONES[unitKey]; if (!phone) return;
-      const { blob, filename, textSummary } = await generatePdfBlob();
-      const files = [new File([blob], filename, { type: 'application/pdf' })];
+    function renderPreview(){
+      // Nome em MAIÚSCULO de verdade
+      const nomeRaw = $('#nome').value || '';
+      const nomeUpper = nomeRaw.toLocaleUpperCase('pt-BR');
+      if (nomeRaw !== nomeUpper) $('#nome').value = nomeUpper;
 
-      if (navigator.canShare && navigator.canShare({ files })) {
-        try {
-          await navigator.share({ files, title: 'PAR-Q — DUO Academia', text: 'Segue meu PAR-Q em PDF.' });
-          const msg = encodeURIComponent(`Enviei o meu PAR-Q em PDF.\n\n${textSummary}`);
-          window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
-          return;
-        } catch (e) { console.warn('Share cancelado/indisponível', e); }
+      const cpf = $('#cpf').value.trim();
+      const data = $('#data_assinatura').value;
+      $('#pv_nome').textContent = nomeUpper;
+      $('#pv_cpf').textContent = cpf;
+      if (data) $('#doc_data').textContent = new Intl.DateTimeFormat('pt-BR').format(new Date(data));
+
+      const a = answers();
+      for(let i=1;i<=7;i++){
+        $('#p'+i+'s').textContent = a['q'+i]==='S' ? 'X' : '';
+        $('#p'+i+'n').textContent = a['q'+i]==='N' ? 'X' : '';
       }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = filename;
-      document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
-      const msg = encodeURIComponent(`Olá! Segue meu PAR-Q. Baixei o PDF e vou anexar na conversa.\n\n${textSummary}`);
-      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
-    }
 
-    async function handleSend(unitKey){ hideSendModal(); await shareOrDownloadThenWhatsApp(unitKey); }
+      const precisa = anyYes(a);
+      $('#anexo2_card').style.display = precisa ? 'block' : 'none';
+      $('#anexo2_sheet').style.display = precisa ? 'block' : 'none';
 
-    // ====== Eventos ======
-    document.getElementById('parqForm').addEventListener('change', () => {
-      updateTermoVisibility(false);
-    });
-    document.getElementById('btnReset').addEventListener('click', () => {
-      setTimeout(()=>{ hideError(); hideSendModal(); updateTermoVisibility(true); },0);
-    });
-
-    document.getElementById('btnGerar').addEventListener('click', () => {
-      hideError();
-      const res = validateRequiredQuestions();
-      if (!res.ok) {
-        const faltam = res.missing.length;
-        const lista = res.missing.map(n => `Pergunta ${n}`).join(', ');
-        showError(`Você precisa responder todas as 7 perguntas obrigatórias. Faltam: <strong>${faltam}</strong> (${lista}).`);
-        return;
-      }
-      const precisa = anyAnswerYes();
+      const img = $('#pv_assinatura');
       if (precisa){
-        if (!termoCheck.checked){
-          showError(`Para prosseguir, marque a opção <strong>"Li e concordo com o termo"</strong>.`);
-          return;
-        }
-        if (!signaturePad || signaturePad.isEmpty()){
-          showError(`Desenhe sua <strong>rubrica</strong> no quadro branco para prosseguir.`);
-          return;
-        }
+        ensureSignaturePad();
+        img.src = signaturePad && !signaturePad.isEmpty() ? signaturePad.toDataURL('image/png') : '';
+      }else{
+        img.src = '';
       }
-      showSendModal();
-    });
+    }
 
-    // Estado inicial
-    updateTermoVisibility(true);
+    async function generatePDF(){
+      const nome = ($('#nome').value || '').trim();
+      const cpf = $('#cpf').value.trim();
+      if (!nome) { alert('Informe o seu nome completo.'); return; }
+      if (!isValidCPF(cpf)) { alert('CPF inválido.'); return; }
+
+      const a = answers();
+      const precisa = anyYes(a);
+
+      if (precisa){
+        if (!$('#aceite').checked){ alert('Você precisa aceitar o termo do Anexo II.'); return; }
+        if (!signaturePad || signaturePad.isEmpty()){ alert('Assine no quadro para continuar.'); return; }
+      }
+
+      // código interno e prévia
+      $('#doc_id').textContent = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+      renderPreview();
+
+      // captura área imprimível
+      const area = document.getElementById('printArea');
+      const canvasImg = await html2canvas(area, { scale: 2, useCORS: true });
+      const imgData = canvasImg.toDataURL('image/png');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p','mm','a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const w = pageWidth - 20, h = (canvasImg.height * w) / canvasImg.width;
+      pdf.addImage(imgData, 'PNG', 10, 10, w, h, undefined, 'FAST');
+
+      // NOME DO ARQUIVO: PARQ_NOMEDAPESSOA_DDMMAAAA
+      const d = new Date($('#data_assinatura').value || Date.now());
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = String(d.getFullYear());
+      const nomeFile = normalizeName(nome); // sem acento/espaço
+      const filename = `PARQ_${nomeFile}_${dd}${mm}${yyyy}.pdf`;
+
+      pdf.save(filename);
+    }
+
+    // eventos
+    ['nome','cpf','data_assinatura'].forEach(id => { const el=$( '#'+id ); el && el.addEventListener('input', renderPreview); el && el.addEventListener('change', renderPreview); });
+    document.getElementById('cpf').addEventListener('input', (e)=> e.target.value = maskCPF(e.target.value));
+    document.getElementById('nome').addEventListener('input', (e)=>{ e.target.value = (e.target.value||'').toLocaleUpperCase('pt-BR'); });
+    for(let i=1;i<=7;i++){ document.querySelectorAll(`input[name="q${i}"]`).forEach(r => r.addEventListener('change', renderPreview)); }
+    document.getElementById('btnPDF').addEventListener('click', (e)=>{ e.preventDefault(); generatePDF(); });
+    document.getElementById('btnReset').addEventListener('click', (e)=>{ e.preventDefault(); if(confirm('Limpar todos os campos?')) location.reload(); });
+
+    setTodayBR();    // preenche a data (campo oculto)
+    renderPreview();
   </script>
 </body>
 </html>
