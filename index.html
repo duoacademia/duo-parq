@@ -398,44 +398,53 @@
       }
     }
 
-    async function generatePDF(){
-      const nome = ($('#nome').value || '').trim();
-      const cpf = $('#cpf').value.trim();
-      if (!nome) { alert('Informe o seu nome completo.'); return; }
-      if (!isValidCPF(cpf)) { alert('CPF inválido.'); return; }
+      async function generatePDF(){
+  const nome = ($('#nome').value || '').trim();
+  const cpf = $('#cpf').value.trim();
+  if (!nome) { alert('Informe o seu nome completo.'); return; }
+  if (!isValidCPF(cpf)) { alert('CPF inválido.'); return; }
 
-      const a = answers();
-      const precisa = anyYes(a);
+  const a = answers();
 
-      if (precisa){
-        if (!$('#aceite').checked){ alert('Você precisa aceitar o termo do Anexo II.'); return; }
-        if (!signaturePad || signaturePad.isEmpty()){ alert('Assine no quadro para continuar.'); return; }
-      }
+  // ✅ NOVA VERIFICAÇÃO: checar se todas as 7 perguntas foram respondidas
+  const unanswered = Object.values(a).some(v => v === '');
+  if (unanswered) {
+    alert('Responda todas as 7 perguntas antes de gerar o PDF.');
+    return;
+  }
 
-      // código interno e prévia
-      $('#doc_id').textContent = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
-      renderPreview();
+  const precisa = anyYes(a);
 
-      // captura área imprimível
-      const area = document.getElementById('printArea');
-      const canvasImg = await html2canvas(area, { scale: 2, useCORS: true });
-      const imgData = canvasImg.toDataURL('image/png');
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF('p','mm','a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const w = pageWidth - 20, h = (canvasImg.height * w) / canvasImg.width;
-      pdf.addImage(imgData, 'PNG', 10, 10, w, h, undefined, 'FAST');
+  if (precisa){
+    if (!$('#aceite').checked){ alert('Você precisa aceitar o termo do Anexo II.'); return; }
+    if (!signaturePad || signaturePad.isEmpty()){ alert('Assine no quadro para continuar.'); return; }
+  }
 
-      // NOME DO ARQUIVO: PARQ_NOMEDAPESSOA_DDMMAAAA
-      const d = new Date($('#data_assinatura').value || Date.now());
-      const dd = String(d.getDate()).padStart(2,'0');
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const yyyy = String(d.getFullYear());
-      const nomeFile = normalizeName(nome); // sem acento/espaço
-      const filename = `PARQ_${nomeFile}_${dd}${mm}${yyyy}.pdf`;
+  // código interno e prévia
+  $('#doc_id').textContent = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
+  renderPreview();
 
-      pdf.save(filename);
-    }
+  // captura área imprimível
+  const area = document.getElementById('printArea');
+  const canvasImg = await html2canvas(area, { scale: 2, useCORS: true });
+  const imgData = canvasImg.toDataURL('image/png');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','mm','a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const w = pageWidth - 20, h = (canvasImg.height * w) / canvasImg.width;
+  pdf.addImage(imgData, 'PNG', 10, 10, w, h, undefined, 'FAST');
+
+  // NOME DO ARQUIVO: PARQ_NOMEDAPESSOA_DDMMAAAA
+  const d = new Date($('#data_assinatura').value || Date.now());
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = String(d.getFullYear());
+  const nomeFile = normalizeName(nome); // sem acento/espaço
+  const filename = `PARQ_${nomeFile}_${dd}${mm}${yyyy}.pdf`;
+
+  pdf.save(filename);
+}
+
 
     // eventos
     ['nome','cpf','data_assinatura'].forEach(id => { const el=$( '#'+id ); el && el.addEventListener('input', renderPreview); el && el.addEventListener('change', renderPreview); });
