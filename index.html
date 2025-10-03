@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <!-- Signature Pad -->
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <!-- jsPDF AutoTable -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root{
       --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --fg:#e5e7eb;
@@ -254,18 +256,195 @@
     }
 
     // ====== PDF ======
-    async function generatePdfBlob() {
+        async function generatePdfBlob() {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+      // Helpers
+      const pad2 = (n)=> String(n).padStart(2,'0');
+      const now = new Date();
+      const dataStr = `${pad2(now.getDate())}/${pad2(now.getMonth()+1)}/${now.getFullYear()}`;
+      const timeStr = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+      const code = `${now.getFullYear()}${pad2(now.getMonth()+1)}${pad2(now.getDate())}${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
 
       const nome = (document.getElementById('nome').value || '').trim();
       const cpf  = (document.getElementById('cpf').value  || '').trim();
 
       const answers = [];
       for (let i=1;i<=7;i++){
-        const checked = document.querySelector('input[name=\"q'+i+'\"]:checked');
-        answers.push({ i, v: checked ? checked.value : '-' });
+        const q = document.querySelector('input[name="q'+i+'"]:checked');
+        answers.push({ i, v: q ? q.value : '-' });
       }
+      const precisaTermo = answers.some(a => a.v === 'Sim');
+      const termoOk = precisaTermo ? !!(document.getElementById('termo_check') && document.getElementById('termo_check').checked) : true;
+
+      // Load logo -> dataURL
+      async function loadImageDataURL(url) {
+        const res = await fetch(url, {mode:'cors'});
+        const blob = await res.blob();
+        return await new Promise((resolve)=>{
+          const reader = new FileReader();
+          reader.onload = ()=> resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      }
+      let logoData = null;
+      try {
+        logoData = await loadImageDataURL('https://i.ibb.co/fVtJWfV3/logoduo.png');
+      } catch(e) { console.warn('Falha ao carregar logo', e); }
+
+      // --- Header ---
+      const left = 14, right = 196; // A4 width 210mm, margins 14mm
+      let y = 12;
+
+      if (logoData){
+        doc.addImage(logoData, 'PNG', left, y, 20, 20);
+      }
+      doc.setFontSize(10);
+      doc.setTextColor(0,0,0);
+      doc.text('DUO ACADEMIA', left+24, y+4);
+      doc.setFontSize(8);
+      doc.setTextColor(80);
+      doc.text('Av. Simão Gomes, 726 • Heliópolis • R. Dom José, 187 • Santo Antônio', left+24, y+9);
+      doc.text('(87) 9.9666-0021 | (87) 9.9934-1230 • coordenacaoduoacademia@gmail.com', left+24, y+14);
+
+      // Code + date
+      doc.setFontSize(9);
+      doc.setTextColor(0);
+      doc.text(`Código: ${code}`, right-60, y+4);
+      doc.text(`Data: ${dataStr}`, right-60, y+10);
+      y += 22;
+
+      // Title band
+      doc.setDrawColor(200);
+      doc.setFillColor(245);
+      doc.roundedRect(left, y, right-left, 10, 1.5, 1.5, 'F');
+      doc.setFontSize(11);
+      doc.setTextColor(0);
+      doc.text('ANEXO I — QUESTIONÁRIO DE PRONTIDÃO PARA ATIVIDADE FÍSICA (PAR-Q)', left+2, y+6);
+      y += 14;
+
+      // Identification table
+      const lawText = 'Em conformidade com a Lei n.º 15.619/2015. Caso você responda "sim" a uma ou mais perguntas, converse com seu médico antes de aumentar seu nível atual de atividade física.';
+
+      doc.setFontSize(10);
+      doc.setDrawColor(210);
+      doc.setFillColor(255);
+      // Name row
+      doc.rect(left, y, right-left, 8);
+      doc.setFont(undefined, 'bold'); doc.text('Nome completo', left+2, y+5);
+      doc.setFont(undefined, 'normal'); doc.text(nome || '(não informado)', left+45, y+5);
+      y += 8;
+      // CPF row
+      doc.rect(left, y, right-left, 8);
+      doc.setFont(undefined, 'bold'); doc.text('CPF', left+2, y+5);
+      doc.setFont(undefined, 'normal'); doc.text(cpf || '(não informado)', left+45, y+5);
+      y += 10;
+
+      // Law notice box
+      doc.setFontSize(9);
+      doc.setTextColor(60);
+      const splitLaw = doc.splitTextToSize(lawText, right-left-4);
+      doc.rect(left, y, right-left, 12 + (splitLaw.length>2 ? (splitLaw.length-2)*4 : 0));
+      doc.text(splitLaw, left+2, y+5);
+      y += 12 + (splitLaw.length>2 ? (splitLaw.length-2)*4 : 0) + 4;
+
+      // Questions table with autoTable
+      const body = answers.map(({i,v})=>{
+        return [
+          `${i}. ${[
+            'Apresenta problema cardíaco de qualquer tipo',
+            'Sente dores no peito quando pratica exercícios',
+            'Sentiu dores no peito recentes durante exercício',
+            'Apresenta desequilíbrio/tontura levando ao desmaio',
+            'Apresenta problema osteomioarticular que pode piorar com exercício',
+            'Usa remédio para pressão/coração',
+            'Conhece alguma razão para não praticar exercícios'
+          ][i-1]}`,
+          v === 'Sim' ? 'X' : '',
+          v === 'Não' ? 'X' : ''
+        ];
+      });
+
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+
+      // load autotable if available
+      if (!doc.autoTable) {
+        // fallback manual grid if autotable not loaded
+        const colW = [right-left-20, 10, 10];
+        // header
+        doc.setFillColor(245);
+        doc.rect(left, y, colW[0]+colW[1]+colW[2], 8, 'F');
+        doc.text('Pergunta', left+2, y+5);
+        doc.text('S', left+colW[0]+colW[1]/2+left, y+5, {align:'center'});
+        doc.text('N', left+colW[0]+colW[1]+colW[2]/2+left, y+5, {align:'center'});
+        y += 8;
+        body.forEach(row=>{
+          const h = 10;
+          doc.rect(left, y, colW[0], h);
+          doc.rect(left+colW[0], y, colW[1], h);
+          doc.rect(left+colW[0]+colW[1], y, colW[2], h);
+          const txt = doc.splitTextToSize(row[0], colW[0]-4);
+          doc.text(txt, left+2, y+5);
+          if (row[1]) doc.text('X', left+colW[0]+colW[1]/2, y+6, {align:'center'});
+          if (row[2]) doc.text('X', left+colW[0]+colW[1]+colW[2]/2, y+6, {align:'center'});
+          y += max(10, (txt.length*4)+4);
+        });
+      } else {
+        doc.autoTable({
+          startY: y,
+          head: [['Pergunta', 'S', 'N']],
+          body: body,
+          theme: 'grid',
+          styles: { fontSize: 9, cellPadding: 3, lineColor: [210,210,210], lineWidth: 0.4 },
+          headStyles: { fillColor: [245,245,245], textColor: [0,0,0], fontStyle: 'bold', halign: 'center' },
+          columnStyles: {
+            0: { cellWidth: right-left-22, halign: 'left' },
+            1: { cellWidth: 11, halign: 'center' },
+            2: { cellWidth: 11, halign: 'center' }
+          },
+          didDrawPage: (data) => {}
+        });
+        y = doc.lastAutoTable.finalY + 6;
+      }
+
+      // Termo + Rubrica
+      doc.setFontSize(10);
+      if (precisaTermo){
+        doc.setDrawColor(210);
+        doc.roundedRect(left, y, right-left, 28, 1.5, 1.5);
+        doc.text('Termo de Responsabilidade:', left+2, y+6);
+        const termoTxt = 'Declaro que estou ciente de que devo buscar avaliação médica antes de iniciar ou prosseguir atividades físicas e que seguirei as orientações profissionais da DUO Academia.';
+        doc.setFontSize(9);
+        doc.setTextColor(60);
+        doc.text(doc.splitTextToSize(termoTxt, right-left-4), left+2, y+11);
+        doc.setTextColor(0);
+        // assinatura desenhada (rubrica)
+        if (signaturePad && !signaturePad.isEmpty()){
+          const imgData = signaturePad.toDataURL('image/png');
+          // box label
+          doc.setFontSize(9);
+          doc.text('Rubrica do aluno (iniciais):', left+2, y+23);
+          doc.setDrawColor(200);
+          doc.rect(left+45, y+15, 40, 12); // caixa
+          doc.addImage(imgData, 'PNG', left+46, y+16, 38, 10);
+        } else {
+          doc.setFontSize(9);
+          doc.text('Rubrica do aluno (iniciais): _________________________________', left+2, y+23);
+        }
+      }
+
+      // output
+      const filename = `PARQ_${(nome || 'aluno').replace(/\s+/g,'_')}_${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}.pdf`;
+      const blob = doc.output('blob');
+
+      const textSummary = `PAR-Q - DUO Academia\nNome: ${nome || '(não informado)'}\nCPF: ${cpf || '(não informado)'}\n\nRespostas:\n` +
+        answers.map(a=>`Q${a.i}: ${a.v}`).join('\n') +
+        `\n\nTermo: ${precisaTermo ? (termoOk ? 'Concordou' : 'Não concordou') : 'Não aplicável'}`;
+
+      return { blob, filename, textSummary };
+    }
 
       const precisaTermo = answers.some(a => a.v === 'Sim');
       const termoOk = precisaTermo ? !!(termoCheck && termoCheck.checked) : true;
@@ -347,8 +526,8 @@
     async function handleSend(unitKey){ hideSendModal(); await shareOrDownloadThenWhatsApp(unitKey); }
 
     // ====== Eventos ======
-    document.getElementById('parqForm').addEventListener('change', (ev) => {
-      if (ev.target && /^q[1-7]$/.test(ev.target.name)) updateTermoVisibility(false);
+    document.getElementById('parqForm').addEventListener('change', () => {
+      updateTermoVisibility(false);
     });
     document.getElementById('btnReset').addEventListener('click', () => {
       setTimeout(()=>{ hideError(); hideSendModal(); updateTermoVisibility(true); },0);
