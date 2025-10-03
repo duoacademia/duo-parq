@@ -4,8 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PAR-Q — DUO Academia</title>
-  <meta name="description" content="Questionário PAR-Q com validação, termo de concordância, geração de PDF e envio por WhatsApp." />
+  <meta name="description" content="Questionário PAR-Q com validação, termo de concordância (rubrica desenhada), geração de PDF e envio por WhatsApp." />
+  <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <!-- Signature Pad -->
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   <style>
     :root{
       --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --fg:#e5e7eb;
@@ -25,22 +28,26 @@
     .actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
     button{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
     button.secondary{background:#334155}
+    button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
     button:disabled{opacity:.6;cursor:not-allowed}
+    input[type="text"]{width:100%;background:#0b1324;border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:10px}
+    label.small{font-size:13px;color:var(--muted)}
     .error-box{
       display:none;background:#1e293b;border:1px solid var(--danger);
       color:#fecaca;border-left:6px solid var(--danger);border-radius:10px;padding:12px 14px;margin:12px 0
     }
-    .success{color:var(--ok);font-weight:600}
-    /* Termo de concordância */
+    /* Termo */
     .termo{
       display:none;border:1px dashed var(--warn);border-radius:10px;padding:12px 14px;background:#0b1324;margin-top:12px
     }
     .termo h3{margin:0 0 6px;font-size:16px;color:#fde68a}
     .termo p{margin:6px 0 12px;color:#eab308}
-    .termo .controls{display:grid;gap:10px}
-    input[type="text"]{width:100%;background:#0b1324;border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:10px}
-    label.small{font-size:13px;color:var(--muted)}
-    /* Mini-modal de envio */
+    .sig-wrap{max-width:420px}
+    .sig-canvas{
+      width:100%;height:160px;background:#fff;border:1px solid #cbd5e1;border-radius:10px;touch-action:none
+    }
+    .sig-actions{display:flex;gap:10px;margin-top:8px}
+    /* Modal ENVIAR PARA */
     .send-modal{
       display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);
       align-items:center;justify-content:center;padding:18px;z-index:50
@@ -59,9 +66,9 @@
   <div class="container">
     <div class="panel">
       <h1>PAR-Q — DUO Academia</h1>
-      <p class="muted">Responda às 7 perguntas obrigatórias. Se marcar “Sim” em qualquer uma, leia e aceite o termo e informe sua rubrica (iniciais). Ao final, gere o PDF e escolha a unidade para envio.</p>
+      <p class="muted">Responda às 7 perguntas obrigatórias. Se marcar “Sim” em qualquer uma, leia e aceite o termo e desenhe sua rubrica. Depois, gere o PDF e escolha a unidade para envio.</p>
 
-      <!-- Identificação básica -->
+      <!-- Identificação -->
       <div class="row" style="gap:10px;margin-bottom:8px">
         <div style="flex:1 1 220px">
           <label class="small">Nome completo</label>
@@ -73,10 +80,9 @@
         </div>
       </div>
 
-      <!-- Caixa de erro -->
+      <!-- Erros -->
       <div id="errorBox" class="error-box"></div>
 
-      <!-- PERGUNTAS (7 obrigatórias) -->
       <form id="parqForm">
         <fieldset data-required>
           <legend>1) Alguma vez um médico já lhe disse que você possui um problema no coração?</legend>
@@ -128,18 +134,21 @@
           </div>
         </fieldset>
 
-        <!-- TERMO DE CONCORDÂNCIA (aparece se qualquer resposta = "Sim") -->
+        <!-- TERMO + RUBRICA (Canvas) -->
         <div id="termoBox" class="termo" aria-hidden="true">
           <h3>Termo de Responsabilidade</h3>
           <p>
             Você assinalou pelo menos uma resposta “Sim”. Confirmo que estou ciente de que devo buscar avaliação médica
             antes de iniciar ou prosseguir atividades físicas. Concordo em seguir as orientações profissionais da DUO Academia.
           </p>
-          <div class="controls">
-            <label><input type="checkbox" id="termo_check" /> Li e concordo com o termo acima.</label>
-            <div>
-              <label class="small" for="rubrica">Rubrica (iniciais) — obrigatória quando houver “Sim”</label>
-              <input type="text" id="rubrica" placeholder="Ex.: JAS" maxlength="8" />
+          <label style="display:block;margin-bottom:8px">
+            <input type="checkbox" id="termo_check" /> Li e concordo com o termo acima.
+          </label>
+          <div class="sig-wrap">
+            <label class="small">Rubrica desenhada (obrigatória quando houver "Sim")</label>
+            <canvas id="canvasRubrica" class="sig-canvas"></canvas>
+            <div class="sig-actions">
+              <button type="button" class="ghost" id="btnLimparRubrica">Limpar rubrica</button>
             </div>
           </div>
         </div>
@@ -169,66 +178,78 @@
   </div>
 
   <script>
-    // Telefones das unidades (formato internacional sem +)
-    const PHONES = {
-      centro: "5587999341230",
-      heliopolis: "5587996660021"
-    };
+    // Telefones
+    const PHONES = { centro: "5587999341230", heliopolis: "5587996660021" };
 
-    // ====== UTILITÁRIOS DE UI ======
+    // ====== UI helpers ======
     const errorBox = document.getElementById('errorBox');
-    function showError(msg) {
-      errorBox.innerHTML = msg;
-      errorBox.style.display = 'block';
-      errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    function showError(msg){ errorBox.innerHTML = msg; errorBox.style.display='block'; errorBox.scrollIntoView({behavior:'smooth', block:'center'}); }
     function hideError(){ errorBox.style.display='none'; }
-
     function showSendModal(){ document.getElementById('sendModal').style.display='flex'; }
     function hideSendModal(){ document.getElementById('sendModal').style.display='none'; }
 
-    // ====== LÓGICA DE VALIDAÇÃO ======
+    // ====== Perguntas ======
     function validateRequiredQuestions() {
       const sets = Array.from(document.querySelectorAll('fieldset[data-required]'));
       const unanswered = [];
       sets.forEach((fs, idx) => {
         const name = 'q' + (idx + 1);
-        const checked = fs.querySelector(`input[name="${name}"]:checked`);
+        const checked = fs.querySelector('input[name=\"'+name+'\"]:checked');
         if (!checked) unanswered.push(idx + 1);
       });
       return { ok: unanswered.length === 0, missing: unanswered };
     }
-
-    function anyAnswerYes() {
-      for (let i = 1; i <= 7; i++) {
-        const checked = document.querySelector(`input[name="q${i}"]:checked`);
-        if (checked && checked.value === 'Sim') return true;
+    function anyAnswerYes(){
+      for(let i=1;i<=7;i++){
+        const el = document.querySelector('input[name=\"q'+i+'\"]:checked');
+        if (el && el.value === 'Sim') return true;
       }
       return false;
     }
 
-    // Mostra/oculta bloco do termo conforme respostas
+    // ====== Termo + SignaturePad ======
     const termoBox = document.getElementById('termoBox');
     const termoCheck = document.getElementById('termo_check');
-    const rubricaInput = document.getElementById('rubrica');
+    const canvas = document.getElementById('canvasRubrica');
+    let signaturePad = null;
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      // guarda tamanho CSS
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      canvas.width = w * ratio;
+      canvas.height = h * ratio;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(ratio, ratio);
+      if (signaturePad) signaturePad.clear();
+    }
+
+    function ensureSignaturePad(){
+      if (!signaturePad) {
+        signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgba(255,255,255,1)', penColor: 'rgb(0,0,0)' });
+        document.getElementById('btnLimparRubrica').addEventListener('click', () => signaturePad.clear());
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+      }
+    }
 
     function updateTermoVisibility(reset=false){
-      if (reset) {
-        termoBox.style.display = 'none';
-        termoBox.setAttribute('aria-hidden','true');
-        termoCheck.checked = false;
-        rubricaInput.value = '';
+      if (reset){
+        termoBox.style.display='none'; termoBox.setAttribute('aria-hidden','true');
+        if (termoCheck) termoCheck.checked = false;
+        if (signaturePad) signaturePad.clear();
         return;
       }
       const precisa = anyAnswerYes();
-      if (precisa) {
-        termoBox.style.display = 'block';
-        termoBox.setAttribute('aria-hidden','false');
-      } else {
-        termoBox.style.display = 'none';
-        termoBox.setAttribute('aria-hidden','true');
-        termoCheck.checked = false;
-        rubricaInput.value = '';
+      if (precisa){
+        termoBox.style.display='block'; termoBox.setAttribute('aria-hidden','false');
+        ensureSignaturePad();
+      }else{
+        termoBox.style.display='none'; termoBox.setAttribute('aria-hidden','true');
+        if (termoCheck) termoCheck.checked = false;
+        if (signaturePad) signaturePad.clear();
       }
     }
 
@@ -242,17 +263,16 @@
 
       const answers = [];
       for (let i=1;i<=7;i++){
-        const checked = document.querySelector(`input[name="q${i}"]:checked`);
+        const checked = document.querySelector('input[name=\"q'+i+'\"]:checked');
         answers.push({ i, v: checked ? checked.value : '-' });
       }
 
       const precisaTermo = answers.some(a => a.v === 'Sim');
-      const termoOk = precisaTermo ? !!termoCheck.checked : true;
-      const rubrica = precisaTermo ? (rubricaInput.value || '').trim() : '';
+      const termoOk = precisaTermo ? !!(termoCheck && termoCheck.checked) : true;
 
-      const today = new Date();
+      const now = new Date();
       const pad2 = (n)=> String(n).padStart(2,'0');
-      const dataStr = `${pad2(today.getDate())}/${pad2(today.getMonth()+1)}/${today.getFullYear()} ${pad2(today.getHours())}:${pad2(today.getMinutes())}`;
+      const dataStr = `${pad2(now.getDate())}/${pad2(now.getMonth()+1)}/${now.getFullYear()} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
 
       // Cabeçalho
       doc.setFontSize(14);
@@ -270,81 +290,72 @@
       doc.setFontSize(12);
       doc.text("Respostas:", 14, 48);
       doc.setFontSize(11);
-      answers.forEach(({i,v})=>{
-        doc.text(`${i}) ${v}`, 14, y);
-        y += 7;
-        if (y > 280) { doc.addPage(); y = 20; }
-      });
+      answers.forEach(({i,v})=>{ doc.text(`${i}) ${v}`, 14, y); y += 7; if (y>280){ doc.addPage(); y=20; } });
 
       // Termo
-      if (y > 250) { doc.addPage(); y = 20; }
+      if (y > 230) { doc.addPage(); y = 20; }
       doc.setFontSize(12);
       doc.text("Termo de Responsabilidade:", 14, y + 6);
       doc.setFontSize(10);
       const termoStatus = precisaTermo ? (termoOk ? "Concordou" : "Não concordou") : "Não aplicável (todas respostas 'Não')";
       doc.text(`Status: ${termoStatus}`, 14, y + 13);
-      if (precisaTermo) {
-        doc.text(`Rubrica: ${rubrica || '(não informada)'}`, 14, y + 20);
+      y += 22;
+
+      // Rubrica desenhada
+      if (precisaTermo && signaturePad && !signaturePad.isEmpty()){
+        try{
+          const imgData = signaturePad.toDataURL('image/png');
+          const imgW = 80, imgH = 40;
+          if (y + imgH + 10 > 290){ doc.addPage(); y = 20; }
+          doc.setFontSize(10);
+          doc.text("Rubrica desenhada:", 14, y);
+          doc.addImage(imgData, 'PNG', 14, y + 4, imgW, imgH);
+          y += imgH + 12;
+        }catch(e){ console.warn('Falha ao inserir rubrica no PDF', e); }
       }
 
-      const filename = `PARQ_${(nome || 'aluno').replace(/\s+/g,'_')}_${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}.pdf`;
+      const filename = `PARQ_${(nome || 'aluno').replace(/\s+/g,'_')}_${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}.pdf`;
       const blob = doc.output('blob');
 
-      // Pequeno resumo em texto para WhatsApp
       const textSummary = `PAR-Q - DUO Academia\nNome: ${nome || '(não informado)'}\nCPF: ${cpf || '(não informado)'}\n\nRespostas:\n` +
         answers.map(a=>`Q${a.i}: ${a.v}`).join('\n') +
-        `\n\nTermo: ${termoStatus}${precisaTermo ? `\nRubrica: ${rubrica || '(não informada)'}` : ''}`;
+        `\n\nTermo: ${termoStatus}${(precisaTermo && signaturePad && !signaturePad.isEmpty()) ? `\nRubrica: (imagem anexada no PDF)` : ''}`;
 
       return { blob, filename, textSummary };
     }
 
-    // Compartilhar / Baixar e abrir WhatsApp
     async function shareOrDownloadThenWhatsApp(unitKey) {
-      const phone = PHONES[unitKey];
-      if (!phone) return;
-
+      const phone = PHONES[unitKey]; if (!phone) return;
       const { blob, filename, textSummary } = await generatePdfBlob();
       const files = [new File([blob], filename, { type: 'application/pdf' })];
 
       if (navigator.canShare && navigator.canShare({ files })) {
         try {
-          await navigator.share({
-            files,
-            title: 'PAR-Q — DUO Academia',
-            text: `Segue meu PAR-Q em PDF.`
-          });
+          await navigator.share({ files, title: 'PAR-Q — DUO Academia', text: 'Segue meu PAR-Q em PDF.' });
           const msg = encodeURIComponent(`Enviei o meu PAR-Q em PDF.\n\n${textSummary}`);
           window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
           return;
-        } catch (e) {
-          console.warn('Compartilhamento cancelado/indisponível, seguindo com download + WhatsApp.', e);
-        }
+        } catch (e) { console.warn('Share cancelado/indisponível', e); }
       }
-
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(a.href);
-      a.remove();
-
-      const msg = encodeURIComponent(
-        `Olá! Segue meu PAR-Q. Baixei o PDF e vou anexar na conversa.\n\n${textSummary}`
-      );
+      a.href = URL.createObjectURL(blob); a.download = filename;
+      document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
+      const msg = encodeURIComponent(`Olá! Segue meu PAR-Q. Baixei o PDF e vou anexar na conversa.\n\n${textSummary}`);
       window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     }
 
-    async function handleSend(unitKey){
-      hideSendModal();
-      await shareOrDownloadThenWhatsApp(unitKey);
-    }
+    async function handleSend(unitKey){ hideSendModal(); await shareOrDownloadThenWhatsApp(unitKey); }
 
-    // ====== BOTÕES / EVENTOS ======
-    document.getElementById('btnGerar').addEventListener('click', async () => {
+    // ====== Eventos ======
+    document.getElementById('parqForm').addEventListener('change', (ev) => {
+      if (ev.target && /^q[1-7]$/.test(ev.target.name)) updateTermoVisibility(false);
+    });
+    document.getElementById('btnReset').addEventListener('click', () => {
+      setTimeout(()=>{ hideError(); hideSendModal(); updateTermoVisibility(true); },0);
+    });
+
+    document.getElementById('btnGerar').addEventListener('click', () => {
       hideError();
-
-      // 1) Checa 7 obrigatórias
       const res = validateRequiredQuestions();
       if (!res.ok) {
         const faltam = res.missing.length;
@@ -352,38 +363,18 @@
         showError(`Você precisa responder todas as 7 perguntas obrigatórias. Faltam: <strong>${faltam}</strong> (${lista}).`);
         return;
       }
-
-      // 2) Se houver alguma “Sim”, termo + rubrica tornam-se obrigatórios
       const precisa = anyAnswerYes();
-      if (precisa) {
-        if (!termoCheck.checked) {
+      if (precisa){
+        if (!termoCheck.checked){
           showError(`Para prosseguir, marque a opção <strong>"Li e concordo com o termo"</strong>.`);
           return;
         }
-        if (!rubricaInput.value.trim()) {
-          showError(`Informe sua <strong>rubrica (iniciais)</strong> para prosseguir.`);
+        if (!signaturePad || signaturePad.isEmpty()){
+          showError(`Desenhe sua <strong>rubrica</strong> no quadro branco para prosseguir.`);
           return;
         }
       }
-
-      // OK → abre seleção de envio
       showSendModal();
-    });
-
-    // Atualiza visual do termo toda vez que marcar/desmarcar respostas
-    document.getElementById('parqForm').addEventListener('change', (ev) => {
-      if (ev.target && /^q[1-7]$/.test(ev.target.name)) {
-        updateTermoVisibility(false);
-      }
-    });
-
-    // Reset limpa tudo (inclui termo e erro)
-    document.getElementById('btnReset').addEventListener('click', () => {
-      setTimeout(() => {
-        hideError();
-        hideSendModal();
-        updateTermoVisibility(true);
-      }, 0);
     });
 
     // Estado inicial
