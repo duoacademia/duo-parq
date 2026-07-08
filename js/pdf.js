@@ -46,7 +46,32 @@
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
+      })
+      .then(function (dataUrl) {
+        return imageDataUrlToJpeg(dataUrl, 360, 360, 0.84);
       });
+  }
+
+  function imageDataUrlToJpeg(dataUrl, maxWidth, maxHeight, quality) {
+    return new Promise(function (resolve, reject) {
+      const image = new Image();
+      image.onload = function () {
+        const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+
+        canvas.width = width;
+        canvas.height = height;
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      image.onerror = reject;
+      image.src = dataUrl;
+    });
   }
 
   function submitToDrive(payload) {
@@ -94,13 +119,17 @@
       throw new Error("A biblioteca de PDF ainda não carregou. Verifique a conexão e tente novamente.");
     }
 
-    const doc = new window.jspdf.jsPDF({ unit: "mm", format: "a4" });
+    const doc = new window.jspdf.jsPDF({
+      unit: "mm",
+      format: "a4",
+      compress: true
+    });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 18;
     let y = 16;
 
-    doc.addImage(logoDataUrl, "PNG", margin, y - 2, 28, 28);
+    doc.addImage(logoDataUrl, "JPEG", margin, y - 2, 28, 28, undefined, "FAST");
     doc.setTextColor(17, 24, 39);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
@@ -172,7 +201,7 @@
     y += 8;
     doc.setDrawColor(203, 213, 225);
     doc.roundedRect(margin, y, pageWidth - margin * 2, 42, 3, 3);
-    doc.addImage(data.signatureImage, "PNG", margin + 4, y + 4, pageWidth - margin * 2 - 8, 29);
+    doc.addImage(data.signatureImage, "JPEG", margin + 4, y + 4, pageWidth - margin * 2 - 8, 29, undefined, "FAST");
     doc.setTextColor(100, 116, 139);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
@@ -192,8 +221,12 @@
   }
 
   async function generateDocument(data) {
-    const logoDataUrl = await imageToDataUrl("logo.png");
-    const doc = drawPdf(data, logoDataUrl);
+    const images = await Promise.all([
+      imageToDataUrl("logo.png"),
+      imageDataUrlToJpeg(data.signatureImage, 1200, 420, 0.78)
+    ]);
+    const pdfData = Object.assign({}, data, { signatureImage: images[1] });
+    const doc = drawPdf(pdfData, images[0]);
     const pdfFileName = formatStudentPdfName(data.fullName);
     const uploadResult = await submitToDrive({
       pdfFileName,
