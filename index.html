@@ -1,348 +1,114 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>DUO Academia — PAR-Q (final v2)</title>
-<style>
-  :root{--bg:#0b1220;--panel:#0f1626;--line:#1f2937;--fg:#e7ecf3;--muted:#9fb0c7;--brand:#3b82f6;--ok:#22c55e;--danger:#ef4444;--dot:#2a3a55;}
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",Arial}
-  .app{max-width:820px;margin:0 auto;padding:20px}
-  .logo{display:block;margin:14px auto 6px;height:46px}
-  h1{text-align:center;font-size:1.9rem;font-weight:900;margin:0}
-  .clock{text-align:center;font-size:3.6rem;font-weight:900;margin:.4rem 0 1rem}
-  .stage{text-align:center;color:#c9d4e4}
-  .dots{display:flex;gap:8px;justify-content:center;margin:.5rem 0 1rem}
-  .dots i{width:10px;height:10px;border-radius:999px;background:var(--dot);opacity:.6}
-  .dots i.active{background:var(--brand);opacity:1}
-  .screen{display:none}
-  .screen.active{display:block;animation:fade .22s ease-out both}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.35)}
-  input{width:100%;padding:16px;border-radius:12px;border:1px solid #22314b;background:#0a1322;color:var(--fg);font-size:1rem}
-  #nome{text-transform:uppercase}
-  .btns{display:flex;gap:12px;margin-top:18px}
-  .btn{flex:1;padding:14px;border-radius:14px;border:1px solid #2a3448;background:#162136;color:#dbeafe;font-weight:800;cursor:pointer}
-  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-  .btn.ok{background:var(--ok);border-color:var(--ok);color:#01250d}
-  .btn.ghost{background:transparent;color:#cfe1ff;border-color:#2a3448;flex:0 0 auto}
-  .btn:disabled{opacity:.45;cursor:not-allowed}
-  .yn{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
-  .yn .btn{font-size:1.25rem;padding:18px 0;border-radius:14px;font-weight:800}
-  .yn .btn[data-yn*=":S"]{background:#ef4444;border-color:#ef4444;color:#fff} /* vermelho p/ Sim */
-  .yn .btn[data-yn*=":N"]{background:#22c55e;border-color:#22c55e;color:#01250d} /* verde p/ Não */
-  .terms{border:1px dashed #334155;border-radius:12px;padding:12px;background:#0a1322;line-height:1.5;margin-bottom:8px}
-  .ckline{display:flex;align-items:center;gap:10px;justify-content:flex-end;white-space:nowrap}
-  #sigWrap{display:none}
-  canvas{width:100%;height:190px;background:#fff;border-radius:10px;border:0;touch-action:none}
-  /* Área de impressão oculta (não usar display:none) */
-  #printContainer{position:absolute;left:-100000px;top:-100000px;width:0;height:0;overflow:hidden;visibility:visible}
-  .sheet{background:#fff;color:#111;width:794px;min-height:1123px;padding:28mm 20mm;border:1px solid #ddd;border-radius:6px}
-  .sheet table{width:100%;border-collapse:collapse;font-size:13px}
-  .sheet th,.sheet td{border:1px solid #ccc;padding:10px 12px;text-align:left;vertical-align:middle}
-  #pv_questions th:nth-child(2),#pv_questions th:nth-child(3),#pv_questions td:nth-child(2),#pv_questions td:nth-child(3){width:10.5%;text-align:center}
-  #pv_questions td.sn{font-weight:800}
-</style>
-<style id="pdf-spacing-fix">
-/* === PDF readability tweak (minimal) === */
-#previewFinal, #printArea, #previewFinal *, #printArea *{
-  letter-spacing: 0.24px;
-  word-spacing: 0.08em;
-  text-rendering: optimizeLegibility;
-}
-</style>
-<style id="aceite-white-fix">
-/* Checkbox custom: branco desmarcado, verde quando marcado */
-#aceite{
-  -webkit-appearance: none;
-  appearance: none;
-  width: 22px;
-  height: 22px;
-  border: 2px solid #fff;      /* borda branca (desmarcado) */
-  border-radius: 6px;
-  background: transparent;
-  display: inline-grid;
-  place-content: center;
-  outline: 2px solid #fff;     /* contorno p/ iOS */
-  outline-offset: 2px;
-  cursor: pointer;
-}
-
-/* desenha o “check” com bordas */
-#aceite::after{
-  content: "";
-  width: 6px;
-  height: 10px;
-  border-right: 3px solid #fff;
-  border-bottom: 3px solid #fff;
-  transform: scale(0) rotate(45deg);
-  transition: transform .12s ease-in-out;
-}
-
-/* estado marcado: fundo verde */
-#aceite:checked{
-  background: #22c55e;         /* verde */
-  border-color: #22c55e;
-  outline-color: #22c55e;
-}
-
-/* mostra o check quando marcado */
-#aceite:checked::after{
-  transform: scale(1) rotate(45deg);
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <title>PAR-Q | DUO Academia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="app">
-  <img class="logo" src="logo.png" alt="DUO">
-  <h1>Questionário de Prontidão para Atividade Física (Par-Q)</h1>
-  <div class="clock" id="clock">--:--:--</div>
-  <div class="stage" id="stage">Etapa 1 de 10</div>
-  <div class="dots" id="dots"></div>
+  <main class="app-shell">
+    <header class="topbar" aria-label="Cabeçalho">
+      <div class="brand">
+        <div class="document-mark" aria-hidden="true"><span></span></div>
+        <img class="logo-mark" src="logo.png" alt="DUO Academia">
+      </div>
+      <div class="secure-chip">
+        <span class="secure-dot"></span>
+        PAR-Q
+      </div>
+    </header>
 
-  <div id="screens">
-    <section class="screen active">
-      <div class="card">
-        <label>Nome completo</label>
-        <input id="nome" placeholder="Ex.: JOÃO DA SILVA">
-        <div class="btns"><button class="btn primary" id="next1" disabled>Próximo</button></div>
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">Questionário obrigatório</p>
+      <h1 id="page-title">PAR-Q DUO Academia</h1>
+      <p class="subtitle">
+        Responda às perguntas de prontidão para atividade física e registre sua confirmação antes de iniciar as atividades.
+      </p>
+    </section>
+
+    <section class="progress-area" aria-label="Progresso">
+      <div class="progress-copy">
+        <span id="progressLabel">Etapa 1 de 10</span>
+        <strong id="progressPercent">10%</strong>
+      </div>
+      <div class="progress-track">
+        <div id="progressBar" class="progress-bar"></div>
       </div>
     </section>
 
-    <section class="screen">
-      <div class="card">
-        <label>CPF</label>
-        <input id="cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
-        <div class="btns"><button class="btn ghost" data-back>Voltar</button><button class="btn primary" id="next2" disabled>Próximo</button></div>
+    <section class="stage-shell" aria-live="polite">
+      <article id="stepCard" class="step-card"></article>
+    </section>
+  </main>
+
+  <template id="identityTemplate">
+    <div class="step-content">
+      <div class="step-number"></div>
+      <h2></h2>
+      <div class="field-grid"></div>
+    </div>
+    <div class="actions">
+      <button class="button secondary" id="prevButton" type="button">Voltar</button>
+      <button class="button primary" id="nextButton" type="button" disabled>Próximo</button>
+    </div>
+  </template>
+
+  <template id="questionTemplate">
+    <div class="step-content">
+      <div class="step-number"></div>
+      <h2></h2>
+      <div class="statement"></div>
+      <div class="choice-grid">
+        <button class="choice-button yes" type="button" data-answer="S">Sim</button>
+        <button class="choice-button no" type="button" data-answer="N">Não</button>
       </div>
+    </div>
+    <div class="actions">
+      <button class="button secondary" id="prevButton" type="button">Voltar</button>
+    </div>
+  </template>
+
+  <template id="termTemplate">
+    <div class="step-content">
+      <div class="step-number"></div>
+      <h2>Termo de Responsabilidade</h2>
+      <div class="statement">
+        <p>Declaro estar ciente de que, caso alguma resposta tenha sido "sim", é recomendável a consulta médica antes de aumentar meu nível de atividade física.</p>
+        <p>Assumo plena responsabilidade por minha prática de atividade física e confirmo que respondi às perguntas acima de forma verdadeira.</p>
+      </div>
+    </div>
+
+    <label class="confirm-box final-confirm">
+      <input type="checkbox" id="termConfirm">
+      <span class="check-visual" aria-hidden="true"></span>
+      <span>Li e concordo com o termo acima.</span>
+    </label>
+
+    <section class="signature-block">
+      <div class="signature-header">
+        <h3>Rúbrica ou assinatura</h3>
+        <button class="button ghost" id="clearSignature" type="button">Limpar</button>
+      </div>
+      <canvas id="signatureCanvas" class="signature-canvas" aria-label="Campo para rúbrica ou assinatura"></canvas>
     </section>
 
-    <section class="screen"><div class="card"><strong>1. Tem algum problema cardíaco de qualquer tipo?</strong><div class="yn"><button class="btn" data-yn="q1:S">Sim</button><button class="btn" data-yn="q1:N">Não</button></div><div class="btns"><button class="btn ghost" data-back>Voltar</button></div></div></section>
-    <section class="screen"><div class="card"><strong>2. Sente dores no peito quando pratica exercícios?</strong><div class="yn"><button class="btn" data-yn="q2:S">Sim</button><button class="btn" data-yn="q2:N">Não</button></div><div class="btns"><button class="btn ghost" data-back>Voltar</button></div></div></section>
-    <section class="screen"><div class="card"><strong>3. Recentemente sentiu dores no peito durante algum exercício físico?</strong><div class="yn"><button class="btn" data-yn="q3:S">Sim</button><button class="btn" data-yn="q3:N">Não</button></div><div class="btns"><button class="btn ghost" data-back>Voltar</button></div></div></section>
-    <section class="screen"><div class="card"><strong>4. Apresenta desequilíbrio ou tontura levando ao desmaio?</strong><div class="yn"><button class="btn" data-yn="q4:S">Sim</button><button class="btn" data-yn="q4:N">Não</button></div><div class="btns"><button class="btn ghost" data-back>Voltar</button></div></div></section>
-    <section class="screen"><div class="card"><strong>5. Tem algum problema ósseo, muscular ou articular que possa piorar com o exercício?</strong><div class="yn"><button class="btn" data-yn="q5:S">Sim</button><button class="btn" data-yn="q5:N">Não</button></div><div class="btns"><button class="btn ghost" data-back>Voltar</button></div></div></section>
-    <section class="screen"><div class="card"><strong>6. Usa algum medicamento para pressão arterial ou coração?</strong><div class="yn"><button class="btn" data-yn="q6:S">Sim</button><button class="btn" data-yn="q6:N">Não</button></div><div class="btns"><button class="btn ghost" data-back>Voltar</button></div></div></section>
-    <section class="screen"><div class="card"><strong>7. Sabe de alguma razão pela qual não deve praticar exercícios?</strong><div class="yn"><button class="btn" data-yn="q7:S">Sim</button><button class="btn" data-yn="q7:N">Não</button></div><div class="btns"><button class="btn ghost" data-back>Voltar</button></div></div></section>
+    <p id="formMessage" class="form-message" role="alert"></p>
 
-    <section class="screen">
-      <div class="card">
-        <h3 style="margin:.2rem 0 .6rem;text-align:center">Termo de responsabilidade (obrigatório)</h3>
-        <div class="terms">
-          Declaro estar ciente de que caso alguma resposta tenha sido "sim" é recomendável a consulta médica antes de aumentar meu nível de atividade física. 
-          Assumo plena responsabilidade por minha prática e concordo com os termos.
-        </div>
-        <label class="ckline"><input id="aceite" type="checkbox"> Li e concordo com o termo acima.</label>
-        <div id="sigWrap">
-          <label>Rúbrica/Assinatura</label>
-          <canvas id="signaturePad" width="900" height="350"></canvas>
-          <div class="btns"><button class="btn" id="btnLimpar">Limpar</button></div>
-        <div class="btns"><button class="btn ok" id="nextTerm">Próximo</button></div>
-        </div>
-        <!-- Agora o botão SEMPRE aparece; começa desabilitado -->
-        </div>
-    </section>
-  
-
-
-    <section class="screen" id="screenPreviewFinal">
-      <div class="card">
-        <h3 style="margin:.2rem 0 .6rem;text-align:center">Prévia do PDF</h3>
-        <div id="previewFinal" class="sheet" style="max-width:794px;margin:0 auto"></div>
-        <div class="btns">
-          <button class="btn" data-back>Voltar</button>
-          <button class="btn ok" id="btnPDF">Gerar PDF</button>
-        </div>
-      </div>
-    </section>
-
-</div>
-</div><!-- Área oculta para gerar PDF -->
-<div id="printContainer" aria-hidden="true">
-  <div id="printArea" class="sheet">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div style="display:flex;gap:10px;align-items:flex-start">
-        <img id="sheet_logo" style="height:34px" alt="Logo DUO"/>
-        <div>
-          <h3 style="margin:0 0 4px">DUO ACADEMIA</h3>
-          <small style="color:#555">PAR-Q — Questionário de Prontidão para Atividade Física</small>
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:12px;color:#444">Código: <span id="doc_id"></span></div>
-        <div style="font-size:12px;color:#444">Data: <span id="doc_data"></span></div>
-      </div>
+    <div class="actions final-actions">
+      <button class="button secondary" id="prevButton" type="button">Voltar</button>
+      <button class="button primary finish" id="finishButton" type="button" disabled>FINALIZAR</button>
     </div>
-    <div style="height:1px;background:#ccc;margin:10px 0"></div>
+  </template>
 
-    <div class="section">
-      <table>
-        <tr><th colspan="2">Identificação</th></tr>
-        <tr><td style="width:26%">Nome completo</td><td id="pv_nome"></td></tr>
-        <tr><td>CPF</td><td id="pv_cpf"></td></tr>
-      </table>
-    </div>
-
-    <div class="section" style="margin-top:14px">
-      <table id="pv_questions">
-        <tr><th style="width:79%">Pergunta</th><th>S</th><th>N</th></tr>
-        <tr><td>1. Possui problema cardíaco de qualquer tipo</td><td id="p1s" class="sn"></td><td id="p1n" class="sn"></td></tr>
-        <tr><td>2. Acusa dores no peito ao praticar exercícios</td><td id="p2s" class="sn"></td><td id="p2n" class="sn"></td></tr>
-        <tr><td>3. Sentiu dores recentes no peito durante atividades de esforço</td><td id="p3s" class="sn"></td><td id="p3n" class="sn"></td></tr>
-        <tr><td>4. Apresenta desequilíbrio/tontura levando ao desmaio</td><td id="p4s" class="sn"></td><td id="p4n" class="sn"></td></tr>
-        <tr><td>5. Possui problema osteomioarticular que pode piorar com exercício</td><td id="p5s" class="sn"></td><td id="p5n" class="sn"></td></tr>
-        <tr><td>6. Usa medicamento para pressão/coração</td><td id="p6s" class="sn"></td><td id="p6n" class="sn"></td></tr>
-        <tr><td>7. Tem ciência de alguma razão para não praticar exercícios</td><td id="p7s" class="sn"></td><td id="p7n" class="sn"></td></tr>
-      </table>
-    </div>
-
-    <div class="section" style="margin-top:14px">
-      <table>
-        <tr><th>Termo de responsabilidade</th></tr>
-        <tr><td>
-          Declaro estar ciente de que, caso alguma resposta tenha sido "sim" é recomendável a consulta médica antes de aumentar meu nível de atividade física.
-          Assumo plena responsabilidade por minha prática e concordo com os termos.
-        </td></tr>
-        <tr><td>
-          <img id="pv_assinatura" alt="Assinatura" style="display:block;width:100%;height:120px;object-fit:contain"/>
-          <div style="height:1px;background:#bbb;margin:6px 0"></div>
-          <div style="font-size:12px;color:#555">Assinatura/Rúbrica do Contratante</div>
-        </td></tr>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- libs -->
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script>
-const $=s=>document.querySelector(s),$$=s=>Array.from(document.querySelectorAll(s));
-const onlyDigits=v=>(v||'').replace(/\D+/g,'');
-const maskCPF=v=>onlyDigits(v).slice(0,11).replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
-function isValidCPF(c){c=onlyDigits(c);if(c.length!==11||/^(\d)\1{10}$/.test(c))return!1;let s=0,r;for(let i=1;i<=9;i++)s+=+c[i-1]*(11-i);r=(s*10)%11;r=r>=10?0:r;if(r!=+c[9])return!1;s=0;for(let i=1;i<=10;i++)s+=+c[i-1]*(12-i);r=(s*10)%11;r=r>=10?0:r;return r==+c[10];}
-
-const screens=$$('#screens .screen');let step=0,total=screens.length;
-function paintDots(){const d=$('#dots');d.innerHTML='';for(let i=0;i<total;i++){const e=document.createElement('i');if(i===step)e.className='active';d.appendChild(e);}}
-function setStage(){ $('#stage').textContent=`Etapa ${step+1} de ${total}`; paintDots(); }
-function go(i){ if(i<0||i>=total)return; screens[step].classList.remove('active'); step=i; screens[step].classList.add('active'); setStage(); }
-paintDots(); setStage();
-
-// relógio
-setInterval(()=>{$('#clock').textContent=new Date().toLocaleTimeString('pt-BR',{hour12:false});},1000);
-
-// navegação nome/cpf
-$('#nome').addEventListener('input',e=>$('#next1').disabled=!e.target.value.trim());
-$('#cpf').addEventListener('input',e=>{e.target.value=maskCPF(e.target.value);$('#next2').disabled=!isValidCPF(e.target.value);});
-$('#next1').onclick=()=>go(1);
-$('#next2').onclick=()=>go(2);
-$$('[data-back]').forEach(b=>b.onclick=()=>go(step-1));
-
-// perguntas S/N
-const answers={q1:'',q2:'',q3:'',q4:'',q5:'',q6:'',q7:''};
-$$('[data-yn]').forEach(b=>b.onclick=()=>{let[k,v]=b.dataset.yn.split(':');answers[k]=v;go(step+1)});
-
-// termo + assinatura
-let signaturePad;
-function updatePDFButton(){
-  const btn = $('#btnPDF');
-  if (!btn) return;
-  const aceiteOk = $('#aceite')?.checked;
-  const assinOk  = (signaturePad && !signaturePad.isEmpty());
-  const scr = btn.closest('.screen'); if (scr && scr.id==='screenPreviewFinal' && scr.classList.contains('active')){ btn.removeAttribute('disabled'); return; } btn.disabled = !(aceiteOk && assinOk);
-}
-function ensureSignaturePad(){
-  if (signaturePad) { updatePDFButton(); return; }
-  const c = $('#signaturePad');
-  const fit = ()=>{
-    const dpr=Math.max(window.devicePixelRatio||1,1), r=c.getBoundingClientRect();
-    c.width=r.width*dpr; c.height=r.height*dpr; c.getContext('2d').scale(dpr,dpr);
-  };
-  fit();
-  signaturePad = new SignaturePad(c,{backgroundColor:'#fff',penColor:'#111',minWidth:.7,maxWidth:2});
-  signaturePad.onBegin = updatePDFButton; signaturePad.onEnd = updatePDFButton;   // ao terminar um traço, revalida
-  $('#btnLimpar').onclick=(e)=>{e.preventDefault(); signaturePad.clear(); updatePDFButton();};
-  window.addEventListener('resize',()=>{ if(!signaturePad) return; const data=signaturePad.toData(); fit(); signaturePad.clear(); signaturePad.fromData(data); });
-}
-$('#aceite').onchange=e=>{ if(e.target.checked){ $('#sigWrap').style.display='block'; ensureSignaturePad(); } else { $('#sigWrap').style.display='none'; if(signaturePad) signaturePad.clear(); } updatePDFButton(); };
-
-// Prévia p/ PDF
-function renderPreview(){
-  $('#pv_nome').textContent = ($('#nome').value||'').toLocaleUpperCase('pt-BR');
-  $('#pv_cpf').textContent = $('#cpf').value||'';
-  for(let i=1;i<=7;i++){ $('#p'+i+'s').textContent=answers['q'+i]==='S'?'X':''; $('#p'+i+'n').textContent=answers['q'+i]==='N'?'X':''; }
-}
-(function setToday(){
-  try{
-    const p=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Fortaleza',day:'2-digit',month:'2-digit',year:'numeric'}).formatToParts(new Date());
-    $('#doc_data').textContent=`${p.find(x=>x.type==='day').value}/${p.find(x=>x.type==='month').value}/${p.find(x=>x.type==='year').value}`;
-  }catch(e){
-    const t=new Date(), dd=String(t.getDate()).padStart(2,'0'), mm=String(t.getMonth()+1).padStart(2,'0'), yy=t.getFullYear();
-    $('#doc_data').textContent=`${dd}/${mm}/${yy}`;
-  }
-})(); (function setLogo(){ const src=new URLSearchParams(location.search).get('logo')||'logo.png'; const img=$('#sheet_logo'); if(img){img.src=src; img.setAttribute('crossorigin','anonymous');} })();
-
-
-// === Etapa 10 -> Prévia Final ===
-const nextTermBtn = document.getElementById('nextTerm');
-if (nextTermBtn){
-  nextTermBtn.addEventListener('click', ()=>{
-    if (!$('#aceite').checked){ alert('Você precisa aceitar o termo para continuar.'); return; }
-    if (!signaturePad || signaturePad.isEmpty()){ alert('Por favor, faça sua rúbrica/assinatura para continuar.'); return; }
-    renderPreview();
-  pushSignatureToPrintArea();
-    const pa = document.getElementById('printArea');
-    const pv = document.getElementById('previewFinal');
-    if (pa && pv){ pv.innerHTML = pa.innerHTML; }
-    go(step+1);
-    const b = document.getElementById('btnPDF');
-    if (b){ b.removeAttribute('disabled'); b.classList.remove('disabled'); }
-  });
-}
-// gerar PDF
-function normalizeName(s){return s.normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^A-Za-z0-9]/g,'').toUpperCase();}
-async function generatePDF(){
-    pushSignatureToPrintArea();
-// validações finais
-  if(!$('#nome').value.trim()){ alert('Informe o nome.'); go(0); return; }
-  if(!isValidCPF($('#cpf').value)){ alert('CPF inválido.'); go(1); return; }
-  if(Object.values(answers).some(v=>v==='')){ alert('Responda todas as 7 perguntas.'); return; }
-  if(!$('#aceite').checked){ alert('Aceite o termo.'); return; }
-  if(!signaturePad || signaturePad.isEmpty()){ alert('Assine para continuar.'); return; }
-
-  $('#doc_id').textContent=new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14);
-  renderPreview();
-
-  const area=document.getElementById('printArea');
-  const canvas=await html2canvas(area,{scale:2,useCORS:true,backgroundColor:'#ffffff'});
-  const imgData=canvas.toDataURL('image/png');
-  const { jsPDF }=window.jspdf;
-  const pdf=new jsPDF('p','mm','a4');
-  const pageWidth=pdf.internal.pageSize.getWidth();
-  const w=pageWidth-20, h=(canvas.height*w)/canvas.width;
-  pdf.addImage(imgData,'PNG',10,10,w,h,'','FAST');
-
-  const d=new Date(), dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0'), yyyy=d.getFullYear();
-  pdf.save(`PARQ_${normalizeName($('#nome').value)}_${dd}${mm}${yyyy}.pdf`);
-}
-document.getElementById('btnPDF').addEventListener('click', (e)=>{ e.preventDefault(); if ($('#btnPDF').disabled) return; generatePDF(); });
-
-// estado inicial do botão
-updatePDFButton();
-
-
-// --- ASSINATURA -> IMAGEM NA FOLHA (printArea) ---
-function pushSignatureToPrintArea(){
-  const img = document.getElementById('pv_assinatura');
-  if (img && typeof signaturePad !== 'undefined' && signaturePad && !signaturePad.isEmpty()){
-    img.src = signaturePad.toDataURL('image/png');
-    img.style.display = 'block';
-  }
-}
-
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/signature.js"></script>
+  <script src="js/pdf.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
